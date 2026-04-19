@@ -40,7 +40,7 @@ python manage.py runserver
 ```
 
 ## 🌐 Deployment
-
+https://schedulai-1-1zfs.onrender.com/
 Render / Railway recommended
 
 ---
