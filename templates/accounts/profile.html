@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Profile — SchedualAI{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start">
+
+  <div class="card" style="text-align:center">
+    <div style="width:80px;height:80px;border-radius:50%;background:#5b4ff5;color:#fff;display:grid;place-items:center;font-size:1.8rem;font-weight:700;margin:0 auto 14px">{{ user.get_initials }}</div>
+    <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700">{{ user.get_full_name|default:user.email }}</div>
+    <div style="color:var(--text-muted);font-size:.85rem;margin-top:4px">{{ user.email }}</div>
+    <div style="margin-top:10px">
+      <span class="badge badge-primary">{{ user.get_role_display }}</span>
+      <span class="badge badge-{% if user.plan == 'free' %}gray{% else %}success{% endif %}" style="margin-left:6px">{{ user.plan|upper }}</span>
+    </div>
+    <div class="divider"></div>
+    <div style="text-align:left;font-size:.82rem;color:var(--text-muted)">
+      <div style="margin-bottom:6px">🏫 {{ user.organization_name|default:"Not set" }}</div>
+      <div style="margin-bottom:6px">🏷 {{ user.get_organization_type_display|default:user.organization_type }}</div>
+      <div>📅 Joined {{ user.created_at|date:"M Y" }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="margin-bottom:20px">Edit Profile</div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email (read-only)</label>
+        <input type="email" class="form-control" value="{{ user.email }}" disabled style="background:#f9fafb;color:var(--text-muted)">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Organization Name</label>
+          <input type="text" name="organization_name" class="form-control" value="{{ user.organization_name }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="text" name="phone" class="form-control" value="{{ user.phone }}" placeholder="+91 9876543210">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

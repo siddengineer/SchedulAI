@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load timetable_tags %}
+
+{% block title %}Resources — SchedualAI{% endblock %}
+{% block page_title %}Classes, Rooms & Subjects{% endblock %}
+
+{% block topbar_actions %}
+{% if tab == 'subjects' %}
+<button class="btn btn-primary" onclick="openModal('modal-add-subject')">+ Add Subject</button>
+{% elif tab == 'rooms' %}
+<button class="btn btn-primary" onclick="openModal('modal-add-room')">+ Add Room</button>
+{% else %}
+<button class="btn btn-primary" onclick="openModal('modal-add-grade')">+ Add Class/Grade</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="tabs">
+  <a href="?tab=classes" class="tab {% if tab == 'classes' %}active{% endif %}">🏫 Classes & Divisions ({{ grades|length }})</a>
+  <a href="?tab=rooms" class="tab {% if tab == 'rooms' %}active{% endif %}">🚪 Rooms ({{ rooms.count }})</a>
+  <a href="?tab=subjects" class="tab {% if tab == 'subjects' %}active{% endif %}">📚 Subjects ({{ subjects.count }})</a>
+</div>
+
+<!-- CLASSES TAB -->
+{% if tab == 'classes' %}
+{% if grades %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+{% for grade in grades %}
+<div class="card" style="padding:0;overflow:hidden">
+  <div style="background:linear-gradient(135deg,#5b4ff5,#7c72f7);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff">{{ grade.name }}</div>
+    <div style="display:flex;gap:6px">
+      <span style="background:rgba(255,255,255,.2);color:#fff;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px">Level {{ grade.level }}</span>
+      <form method="post" action="{% url 'delete_grade' grade.pk %}" onsubmit="return confirm('Delete grade and all its divisions?')">
+        {% csrf_token %}
+        <button type="submit" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.78rem">✕</button>
+      </form>
+    </div>
+  </div>
+  <div style="padding:14px 18px">
+    {% for div in grade.divisions.all %}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6">
+      <div>
+        <strong style="font-size:.88rem">Division {{ div.name }}</strong>
+        <span style="color:var(--text-muted);font-size:.78rem;margin-left:8px">{{ div.strength }} students</span>
+      </div>
+      {% if div.class_teacher %}<span class="badge badge-primary">{{ div.class_teacher.name }}</span>{% endif %}
+    </div>
+    {% empty %}
+    <p style="color:var(--text-muted);font-size:.82rem;text-align:center;padding:10px 0">No divisions</p>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="empty-state">
+  <div class="empty-icon">🏫</div>
+  <div class="empty-title">No classes added</div>
+  <div class="empty-desc">Add grades and divisions to structure your school's classes.</div>
+  <button class="btn btn-primary" onclick="openModal('modal-add-grade')">+ Add Class/Grade</button>
+</div></div>
+{% endif %}
+
+<!-- ROOMS TAB -->
+{% elif tab == 'rooms' %}
+{% if rooms %}
+<div class="card" style="padding:0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Room Name</th><th>Number</th><th>Type</th><th>Capacity</th><th>Building</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for room in rooms %}
+        <tr>
+          <td><strong>{{ room.name }}</strong></td>
+          <td>{{ room.room_number|default:"—" }}</td>
+          <td><span class="badge badge-secondary">{{ room.get_room_type_display }}</span></td>
+          <td>{{ room.capacity }}</td>
+          <td>{{ room.building|default:"—" }}</td>
+          <td>
+            <form method="post" action="{% url 'delete_room' room.pk %}" onsubmit="return confirm('Delete room?')">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><div class="empty-state">
+  <div class="empty-icon">🚪</div>
+  <div class="empty-title">No rooms added</div>
+  <div class="empty-desc">Add classrooms, labs, and other teaching spaces.</div>
+  <button class="btn btn-primary" onclick="openModal('modal-add-room')">+ Add Room</button>
+</div></div>
+{% endif %}
+
+<!-- SUBJECTS TAB -->
+{% elif tab == 'subjects' %}
+{% if subjects %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+{% for sub in subjects %}
+<div class="card" style="padding:16px;display:flex;align-items:center;gap:12px">
+  <div style="width:42px;height:42px;border-radius:10px;background:{{ sub.color }}22;display:grid;place-items:center;flex-shrink:0">
+    <div style="width:16px;height:16px;border-radius:50%;background:{{ sub.color }}"></div>
+  </div>
+  <div style="flex:1;min-width:0">
+    <div style="font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sub.name }}</div>
+    <div style="font-size:.75rem;color:var(--text-muted)">{{ sub.code|default:"No code" }} · {{ sub.get_subject_type_display }}</div>
+  </div>
+  <form method="post" action="{% url 'delete_subject' sub.pk %}" onsubmit="return confirm('Delete subject?')">
+    {% csrf_token %}
+    <button type="submit" class="btn-icon" style="width:28px;height:28px;font-size:.8rem">✕</button>
+  </form>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="empty-state">
+  <div class="empty-icon">📚</div>
+  <div class="empty-title">No subjects added</div>
+  <div class="empty-desc">Add subjects like Mathematics, Science, English etc.</div>
+  <button class="btn btn-primary" onclick="openModal('modal-add-subject')">+ Add Subject</button>
+</div></div>
+{% endif %}
+{% endif %}
+
+<!-- ADD GRADE MODAL -->
+<div class="modal-overlay" id="modal-add-grade">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Grade / Class</div>
+      <button class="modal-close" onclick="closeModal('modal-add-grade')">✕</button>
+    </div>
+    <form method="post" action="{% url 'add_grade' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Grade Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Class 10, Grade 5" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Level</label>
+            <input type="number" name="level" class="form-control" value="1" min="1" max="20">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Divisions (comma separated)</label>
+          <input type="text" name="divisions" class="form-control" placeholder="A, B, C">
+          <div style="font-size:.76rem;color:var(--text-muted);margin-top:4px">Enter division names separated by commas. e.g. A, B, C</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Students per Division</label>
+          <input type="number" name="strength" class="form-control" value="40" min="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-grade')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Grade</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD ROOM MODAL -->
+<div class="modal-overlay" id="modal-add-room">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Room</div>
+      <button class="modal-close" onclick="closeModal('modal-add-room')">✕</button>
+    </div>
+    <form method="post" action="{% url 'add_room' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Room Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Room 101" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Room Number</label>
+            <input type="text" name="room_number" class="form-control" placeholder="101">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select name="room_type" class="form-control">
+              <option value="classroom">Classroom</option>
+              <option value="lab">Laboratory</option>
+              <option value="auditorium">Auditorium</option>
+              <option value="library">Library</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Capacity</label>
+            <input type="number" name="capacity" class="form-control" value="40" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Building / Block</label>
+          <input type="text" name="building" class="form-control" placeholder="Main Block">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-room')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Room</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD SUBJECT MODAL -->
+<div class="modal-overlay" id="modal-add-subject">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Subject</div>
+      <button class="modal-close" onclick="closeModal('modal-add-subject')">✕</button>
+    </div>
+    <form method="post" action="{% url 'add_subject' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Subject Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Mathematics" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject Code</label>
+            <input type="text" name="code" class="form-control" placeholder="MATH101">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select name="subject_type" class="form-control">
+              <option value="theory">Theory</option>
+              <option value="practical">Practical</option>
+              <option value="activity">Activity</option>
+              <option value="elective">Elective</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+              {% for color in "#6366f1,#f59e0b,#10b981,#ef4444,#3b82f6,#8b5cf6,#ec4899,#14b8a6,#f97316,#84cc16"|split:"," %}
+              <label style="cursor:pointer">
+                <input type="radio" name="color" value="{{ color }}" style="display:none" {% if forloop.first %}checked{% endif %}>
+                <div style="width:28px;height:28px;border-radius:50%;background:{{ color }};border:3px solid transparent;transition:all .2s" onclick="this.parentElement.querySelector('input').checked=true;document.querySelectorAll('.color-pick').forEach(d=>d.style.borderColor='transparent');this.style.borderColor='#1a1830';" class="color-pick"></div>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-subject')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Subject</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

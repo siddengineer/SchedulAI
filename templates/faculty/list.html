@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% block title %}Faculty — SchedualAI{% endblock %}
+{% block page_title %}Faculty{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="openModal('modal-add-faculty')">+ Add Faculty</button>
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+  <div class="card" style="flex:1;min-width:140px;padding:16px;display:flex;align-items:center;gap:12px">
+    <div class="stat-icon purple" style="width:40px;height:40px">👨‍🏫</div>
+    <div><div class="stat-value" style="font-size:1.4rem">{{ faculty.count }}</div><div class="stat-label">Total</div></div>
+  </div>
+  <div class="card" style="flex:1;min-width:140px;padding:16px;display:flex;align-items:center;gap:12px">
+    <div class="stat-icon green" style="width:40px;height:40px">✅</div>
+    <div><div class="stat-value" style="font-size:1.4rem">{{ faculty|length }}</div><div class="stat-label">Active</div></div>
+  </div>
+  <div class="card" style="flex:1;min-width:140px;padding:16px;display:flex;align-items:center;gap:12px">
+    <div class="stat-icon orange" style="width:40px;height:40px">📚</div>
+    <div><div class="stat-value" style="font-size:1.4rem">{{ subjects.count }}</div><div class="stat-label">Subjects</div></div>
+  </div>
+</div>
+
+<div class="card" style="padding:0">
+  <div style="padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <div class="card-title">All Faculty Members</div>
+    <input type="text" placeholder="🔍 Search faculty…" class="form-control" style="max-width:240px;padding:7px 12px" oninput="filterTable(this.value)">
+  </div>
+  {% if faculty %}
+  <div class="table-wrap">
+    <table id="faculty-table">
+      <thead>
+        <tr>
+          <th>Faculty</th>
+          <th>Employee ID</th>
+          <th>Department</th>
+          <th>Subjects</th>
+          <th>Max Periods/Wk</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in faculty %}
+        <tr class="faculty-row">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:#5b4ff5;color:#fff;display:grid;place-items:center;font-size:.82rem;font-weight:700;flex-shrink:0">{{ f.get_initials }}</div>
+              <div>
+                <div style="font-weight:600">{{ f.name }}</div>
+                <div style="font-size:.75rem;color:var(--text-muted)">{{ f.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td>{{ f.employee_id|default:"—" }}</td>
+          <td>{{ f.department|default:"—" }}</td>
+          <td>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              {% for sub in f.subjects.all|slice:":3" %}
+              <span class="badge badge-primary" style="font-size:.68rem">{{ sub.name }}</span>
+              {% endfor %}
+              {% if f.subjects.count > 3 %}<span class="badge badge-secondary">+{{ f.subjects.count|add:"-3" }}</span>{% endif %}
+              {% if not f.subjects.exists %}<span style="color:var(--text-muted);font-size:.8rem">—</span>{% endif %}
+            </div>
+          </td>
+          <td><span class="badge badge-secondary">{{ f.max_periods_per_week }}/wk</span></td>
+          <td>
+            <span class="badge badge-{% if f.status == 'active' %}success{% elif f.status == 'on_leave' %}warning{% else %}danger{% endif %}">
+              {{ f.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <div class="td-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ f.pk }}, '{{ f.name|escapejs }}', '{{ f.email|escapejs }}', '{{ f.phone|escapejs }}', '{{ f.employee_id|escapejs }}', '{{ f.department|escapejs }}', '{{ f.designation|escapejs }}', {{ f.max_periods_per_day }}, {{ f.max_periods_per_week }}, '{{ f.status }}')">✏ Edit</button>
+              <button class="btn btn-secondary btn-sm" onclick="openLeaveModal({{ f.pk }}, '{{ f.name|escapejs }}')">📅 Leave</button>
+              <form method="post" action="{% url 'delete_faculty' f.pk %}" onsubmit="return confirm('Delete {{ f.name }}?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">🗑</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">👨‍🏫</div>
+    <div class="empty-title">No faculty members yet</div>
+    <div class="empty-desc">Add teachers and instructors to start building your timetable.</div>
+    <button class="btn btn-primary" onclick="openModal('modal-add-faculty')">+ Add Faculty</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Add Faculty Modal -->
+<div class="modal-overlay" id="modal-add-faculty">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div class="modal-title">Add Faculty Member</div>
+      <button class="modal-close" onclick="closeModal('modal-add-faculty')">✕</button>
+    </div>
+    <form method="post" action="{% url 'add_faculty' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" name="name" class="form-control" placeholder="Dr. Rajesh Kumar" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" placeholder="teacher@school.edu">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" name="phone" class="form-control" placeholder="+91 9876543210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Employee ID</label>
+            <input type="text" name="employee_id" class="form-control" placeholder="EMP001">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <input type="text" name="department" class="form-control" placeholder="Science">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Designation</label>
+            <input type="text" name="designation" class="form-control" placeholder="Senior Teacher">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Max Periods/Day</label>
+            <input type="number" name="max_periods_per_day" class="form-control" value="6" min="1" max="15">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Periods/Week</label>
+            <input type="number" name="max_periods_per_week" class="form-control" value="30" min="1" max="60">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subjects (can teach)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+            {% for sub in subjects %}
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.83rem;padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;transition:all .2s">
+              <input type="checkbox" name="subjects" value="{{ sub.pk }}" style="accent-color:{{ sub.color }}"
+                onchange="this.parentElement.style.background=this.checked?'{{ sub.color }}22':'';this.parentElement.style.borderColor=this.checked?'{{ sub.color }}':''">
+              <span class="color-dot" style="background:{{ sub.color }}"></span>{{ sub.name }}
+            </label>
+            {% empty %}
+            <p style="font-size:.82rem;color:var(--text-muted)">No subjects found. <a href="{% url 'resources' %}?tab=subjects" style="color:#5b4ff5">Add subjects first →</a></p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-faculty')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Faculty</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Faculty Modal -->
+<div class="modal-overlay" id="modal-edit-faculty">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div class="modal-title">Edit Faculty</div>
+      <button class="modal-close" onclick="closeModal('modal-edit-faculty')">✕</button>
+    </div>
+    <form method="post" id="edit-faculty-form" action="">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Full Name *</label><input type="text" name="name" id="edit-name" class="form-control" required></div>
+          <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" id="edit-email" class="form-control"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Department</label><input type="text" name="department" id="edit-dept" class="form-control"></div>
+          <div class="form-group"><label class="form-label">Designation</label><input type="text" name="designation" id="edit-desig" class="form-control"></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Max Periods/Day</label><input type="number" name="max_periods_per_day" id="edit-mpd" class="form-control" min="1"></div>
+          <div class="form-group"><label class="form-label">Max Periods/Week</label><input type="number" name="max_periods_per_week" id="edit-mpw" class="form-control" min="1"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" id="edit-status" class="form-control">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="on_leave">On Leave</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-edit-faculty')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Leave Modal -->
+<div class="modal-overlay" id="modal-leave">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Record Leave — <span id="leave-faculty-name"></span></div>
+      <button class="modal-close" onclick="closeModal('modal-leave')">✕</button>
+    </div>
+    <form method="post" id="leave-form" action="">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Start Date</label><input type="date" name="start_date" class="form-control" required></div>
+          <div class="form-group"><label class="form-label">End Date</label><input type="date" name="end_date" class="form-control" required></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Leave Type</label>
+          <select name="leave_type" class="form-control">
+            <option value="casual">Casual</option>
+            <option value="sick">Sick</option>
+            <option value="earned">Earned</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Reason</label><textarea name="reason" class="form-control" placeholder="Optional reason…"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-leave')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Record Leave</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterTable(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.faculty-row').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+function openEditModal(pk, name, email, phone, empId, dept, desig, mpd, mpw, status) {
+  document.getElementById('edit-faculty-form').action = `/faculty/edit/${pk}/`;
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-email').value = email;
+  document.getElementById('edit-dept').value = dept;
+  document.getElementById('edit-desig').value = desig;
+  document.getElementById('edit-mpd').value = mpd;
+  document.getElementById('edit-mpw').value = mpw;
+  document.getElementById('edit-status').value = status;
+  openModal('modal-edit-faculty');
+}
+function openLeaveModal(pk, name) {
+  document.getElementById('leave-form').action = `/faculty/leave/${pk}/`;
+  document.getElementById('leave-faculty-name').textContent = name;
+  openModal('modal-leave');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block title %}Setup — {{ tt.name }}{% endblock %}
+{% block page_title %}{{ tt.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'timetable_list' %}" class="btn btn-secondary btn-sm">← Back</a>
+{% if tt.status == 'generated' %}
+<a href="{% url 'timetable_view' tt.pk %}" class="btn btn-primary btn-sm">View Timetable</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Progress Steps -->
+<div style="display:flex;gap:0;margin-bottom:28px;align-items:center">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:36px;height:36px;border-radius:50%;background:{% if setup_steps.bell %}#10b981{% else %}#5b4ff5{% endif %};color:#fff;display:grid;place-items:center;font-weight:700;font-size:.85rem">{% if setup_steps.bell %}✓{% else %}1{% endif %}</div>
+    <div style="font-size:.72rem;color:var(--text-muted);margin-top:5px;text-align:center">Bell<br>Schedule</div>
+  </div>
+  <div style="flex:1;height:2px;background:{% if setup_steps.bell %}#10b981{% else %}#e5e7eb{% endif %};margin:0 6px;margin-bottom:22px"></div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:36px;height:36px;border-radius:50%;background:{% if setup_steps.lessons %}#10b981{% elif setup_steps.bell %}#5b4ff5{% else %}#e5e7eb{% endif %};color:{% if setup_steps.lessons or setup_steps.bell %}#fff{% else %}#9ca3af{% endif %};display:grid;place-items:center;font-weight:700;font-size:.85rem">{% if setup_steps.lessons %}✓{% else %}2{% endif %}</div>
+    <div style="font-size:.72rem;color:var(--text-muted);margin-top:5px;text-align:center">Lessons<br>Config</div>
+  </div>
+  <div style="flex:1;height:2px;background:{% if setup_steps.lessons %}#10b981{% else %}#e5e7eb{% endif %};margin:0 6px;margin-bottom:22px"></div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:36px;height:36px;border-radius:50%;background:{% if setup_steps.generated %}#10b981{% elif setup_steps.lessons %}#5b4ff5{% else %}#e5e7eb{% endif %};color:{% if setup_steps.generated or setup_steps.lessons %}#fff{% else %}#9ca3af{% endif %};display:grid;place-items:center;font-weight:700;font-size:.85rem">{% if setup_steps.generated %}✓{% else %}3{% endif %}</div>
+    <div style="font-size:.72rem;color:var(--text-muted);margin-top:5px;text-align:center">Generate<br>& Publish</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+
+<div>
+<!-- Bell Schedule -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header">
+    <div>
+      <div class="card-title">🔔 Bell Schedule</div>
+      <div class="card-subtitle">Define working days and class periods</div>
+    </div>
+    <a href="{% url 'bell_list' %}" class="btn btn-secondary btn-sm">Manage Bells</a>
+  </div>
+  {% if tt.bell_schedule %}
+  <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-bottom:14px">
+    <strong style="color:#065f46">✓ {{ tt.bell_schedule.name }}</strong>
+    <span style="color:#6b7280;font-size:.82rem;margin-left:8px">{{ tt.bell_schedule.periods.count }} periods · {{ tt.bell_schedule.working_days|join:', ' }}</span>
+  </div>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="assign_bell">
+    <div style="display:flex;gap:10px">
+      <select name="bell_schedule" class="form-control" required>
+        <option value="">Select bell schedule…</option>
+        {% for bell in bell_schedules %}
+        <option value="{{ bell.pk }}" {% if tt.bell_schedule == bell %}selected{% endif %}>{{ bell.name }} ({{ bell.periods.count }} periods)</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary" style="white-space:nowrap">Assign</button>
+    </div>
+    {% if not bell_schedules %}
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:10px">No bell schedules found. <a href="{% url 'bell_list' %}" style="color:#5b4ff5">Create one first →</a></p>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Lessons -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-header">
+    <div>
+      <div class="card-title">📚 Lessons Configuration</div>
+      <div class="card-subtitle">{{ lessons.count }} lesson{{ lessons.count|pluralize }} configured</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('modal-lesson')">+ Add Lesson</button>
+  </div>
+
+  {% if lessons %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Subject</th><th>Division</th><th>Faculty</th><th>Periods/Week</th><th>Room</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for lesson in lessons %}
+        <tr>
+          <td>
+            <span class="color-dot" style="background:{{ lesson.subject.color }}"></span>
+            <strong style="margin-left:6px">{{ lesson.subject.name }}</strong>
+          </td>
+          <td>{{ lesson.division }}</td>
+          <td>{{ lesson.faculty.name|default:"—" }}</td>
+          <td><span class="badge badge-primary">{{ lesson.periods_per_week }}/wk</span></td>
+          <td>{{ lesson.room.name|default:"—" }}</td>
+          <td>
+            <form method="post" onsubmit="return confirm('Remove this lesson?')">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete_lesson">
+              <input type="hidden" name="lesson_id" value="{{ lesson.pk }}">
+              <button type="submit" class="btn btn-danger btn-sm">✕</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:30px">
+    <div class="empty-icon">📚</div>
+    <div class="empty-title">No lessons yet</div>
+    <div class="empty-desc">Add lessons by selecting subject, division, and faculty.</div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('modal-lesson')">+ Add First Lesson</button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Generate -->
+<div class="card" style="background:linear-gradient(135deg,#f8f7ff,#ede9fe);border:2px solid #c4b5fd">
+  <div class="card-header">
+    <div>
+      <div class="card-title">🤖 Generate with AI</div>
+      <div class="card-subtitle">Auto-schedule all lessons with conflict detection</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="generate">
+      <button type="submit" class="btn btn-primary"
+        {% if not setup_steps.bell or not setup_steps.lessons %}disabled title="Complete bell schedule and lessons first"{% endif %}
+        onclick="this.textContent='⏳ Generating…';this.disabled=true;this.form.submit()">
+        ⚡ Generate Timetable
+      </button>
+    </form>
+    {% if tt.status in 'generated published' %}
+    <a href="{% url 'timetable_view' tt.pk %}" class="btn btn-success">👁 View Result</a>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="publish">
+      <button type="submit" class="btn btn-secondary">🚀 Publish</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if not setup_steps.bell %}<p style="color:#7c3aed;font-size:.82rem;margin-top:10px">⚠ Assign a bell schedule first.</p>{% endif %}
+  {% if not setup_steps.lessons %}<p style="color:#7c3aed;font-size:.82rem;margin-top:4px">⚠ Add at least one lesson.</p>{% endif %}
+</div>
+
+</div><!-- end left col -->
+
+<!-- Right: Tips -->
+<div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:14px">💡 Tips & Tricks</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#fff7ed;border-radius:8px;padding:12px;font-size:.82rem">
+        <strong style="color:#92400e">📌 Descriptive Names Work Best</strong>
+        <p style="color:#6b7280;margin-top:4px">Use names like "Class 10 Term-1" rather than "Timetable 1".</p>
+      </div>
+      <div style="background:#eff6ff;border-radius:8px;padding:12px;font-size:.82rem">
+        <strong style="color:#1e40af">🔄 Auto-Save Active</strong>
+        <p style="color:#6b7280;margin-top:4px">All changes save immediately.</p>
+      </div>
+      <div style="background:#ecfdf5;border-radius:8px;padding:12px;font-size:.82rem">
+        <strong style="color:#065f46">⚡ AI Generation</strong>
+        <p style="color:#6b7280;margin-top:4px">The scheduler avoids conflicts, respects faculty limits, and spreads subjects across the week.</p>
+      </div>
+      <div style="background:#fdf4ff;border-radius:8px;padding:12px;font-size:.82rem">
+        <strong style="color:#7e22ce">🤖 Need Help?</strong>
+        <p style="color:#6b7280;margin-top:4px"><a href="{% url 'chatbot' %}?timetable={{ tt.pk }}" style="color:#5b4ff5">Open AI Chatbot</a> to ask questions about this timetable.</p>
+      </div>
+    </div>
+  </div>
+
+  {% if tt.generation_log %}
+  <div class="card">
+    <div class="card-title" style="margin-bottom:10px">📋 Generation Log</div>
+    <pre style="font-size:.75rem;color:var(--text-muted);white-space:pre-wrap;max-height:200px;overflow-y:auto;background:#f8f7ff;padding:10px;border-radius:8px;line-height:1.5">{{ tt.generation_log }}</pre>
+  </div>
+  {% endif %}
+</div>
+
+</div><!-- grid -->
+
+<!-- Add Lesson Modal -->
+<div class="modal-overlay" id="modal-lesson">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Lesson</div>
+      <button class="modal-close" onclick="closeModal('modal-lesson')">✕</button>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_lesson">
+      <div class="modal-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Subject *</label>
+            <select name="subject" class="form-control" required>
+              <option value="">Select subject…</option>
+              {% for sub in subjects %}<option value="{{ sub.pk }}">{{ sub.name }}</option>{% endfor %}
+            </select>
+            {% if not subjects %}<div style="font-size:.75rem;color:#f97316;margin-top:4px">⚠ <a href="{% url 'resources' %}">Add subjects first</a></div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Division *</label>
+            <select name="division" class="form-control" required>
+              <option value="">Select division…</option>
+              {% for grade in grades %}
+                {% for div in grade.divisions.all %}
+                <option value="{{ div.pk }}">{{ grade.name }} - {{ div.name }}</option>
+                {% endfor %}
+              {% endfor %}
+            </select>
+            {% if not grades %}<div style="font-size:.75rem;color:#f97316;margin-top:4px">⚠ <a href="{% url 'resources' %}">Add classes first</a></div>{% endif %}
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Faculty</label>
+            <select name="faculty" class="form-control">
+              <option value="">Unassigned</option>
+              {% for f in faculty %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Periods per Week</label>
+            <input type="number" name="periods_per_week" class="form-control" value="4" min="1" max="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred Room (Optional)</label>
+          <select name="room" class="form-control">
+            <option value="">Any available room</option>
+            {% for r in rooms %}<option value="{{ r.pk }}">{{ r.name }} (cap: {{ r.capacity }})</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-lesson')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Lesson</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

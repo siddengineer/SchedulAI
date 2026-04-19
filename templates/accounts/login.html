@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — SchedualAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#0f0e1a;min-height:100vh;display:flex}
+.auth-left{
+  flex:1;background:linear-gradient(145deg,#1a1830 0%,#0f0e1a 50%,#12103d 100%);
+  display:flex;flex-direction:column;justify-content:center;padding:60px;
+  position:relative;overflow:hidden;
+}
+.auth-left::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 50%,rgba(91,79,245,.15) 0%,transparent 60%),
+             radial-gradient(circle at 70% 20%,rgba(249,115,22,.08) 0%,transparent 50%);
+}
+.brand{position:relative;z-index:1}
+.brand-logo{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#fff;margin-bottom:12px}
+.brand-logo span{color:#7c72f7}
+.brand-tagline{color:rgba(168,158,201,.7);font-size:1rem;max-width:360px;line-height:1.6;margin-bottom:48px}
+.feature-list{position:relative;z-index:1;display:flex;flex-direction:column;gap:16px}
+.feature-item{display:flex;align-items:center;gap:14px;color:rgba(255,255,255,.8);font-size:.9rem}
+.feature-item .fi{width:38px;height:38px;border-radius:10px;background:rgba(91,79,245,.2);display:grid;place-items:center;font-size:1.1rem;flex-shrink:0}
+.floating-cards{position:absolute;right:40px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;opacity:.6}
+.fc{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 16px;width:200px}
+.fc-label{font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.fc-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+.fc-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,#5b4ff5,#7c72f7)}
+
+.auth-right{
+  width:480px;background:#fff;display:flex;flex-direction:column;
+  justify-content:center;padding:60px 52px;
+}
+.auth-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;color:#1a1830;margin-bottom:6px}
+.auth-subtitle{color:#6b7280;font-size:.9rem;margin-bottom:32px}
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:.82rem;font-weight:600;color:#374151;margin-bottom:6px}
+.form-control{
+  width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:9px;
+  font-size:.9rem;font-family:'DM Sans',sans-serif;color:#111;outline:none;
+  transition:all .2s;background:#fafafa;
+}
+.form-control:focus{border-color:#5b4ff5;background:#fff;box-shadow:0 0 0 3px rgba(91,79,245,.1)}
+.btn-auth{
+  width:100%;padding:12px;background:#5b4ff5;color:#fff;border:none;
+  border-radius:9px;font-size:.95rem;font-weight:700;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:all .2s;margin-top:6px;
+}
+.btn-auth:hover{background:#3d33c9;transform:translateY(-1px);box-shadow:0 4px 16px rgba(91,79,245,.4)}
+.auth-link{text-align:center;margin-top:20px;font-size:.87rem;color:#6b7280}
+.auth-link a{color:#5b4ff5;font-weight:600;text-decoration:none}
+.auth-link a:hover{text-decoration:underline}
+.error-msg{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-bottom:16px}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:#9ca3af;font-size:.8rem}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e5e7eb}
+@media(max-width:900px){.auth-left{display:none}.auth-right{width:100%;padding:40px 28px}}
+</style>
+</head>
+<body>
+
+<div class="auth-left">
+  <div class="brand">
+    <div class="brand-logo">Schedual<span>AI</span></div>
+    <p class="brand-tagline">AI-powered timetable generation for schools and colleges. Build conflict-free schedules in minutes.</p>
+  </div>
+  <div class="feature-list">
+    <div class="feature-item"><div class="fi">🤖</div>AI auto-generation with Groq LLaMA</div>
+    <div class="feature-item"><div class="fi">⚡</div>Conflict-free scheduling in seconds</div>
+    <div class="feature-item"><div class="fi">📊</div>Faculty workload analytics</div>
+    <div class="feature-item"><div class="fi">💬</div>AI chatbot for schedule queries</div>
+  </div>
+  <div class="floating-cards">
+    <div class="fc"><div class="fc-label">Faculty Utilization</div><div class="fc-bar"><div class="fc-bar-fill" style="width:78%"></div></div></div>
+    <div class="fc"><div class="fc-label">Conflicts Resolved</div><div class="fc-bar"><div class="fc-bar-fill" style="width:100%;background:linear-gradient(90deg,#10b981,#34d399)"></div></div></div>
+    <div class="fc"><div class="fc-label">Periods Scheduled</div><div class="fc-bar"><div class="fc-bar-fill" style="width:92%;background:linear-gradient(90deg,#f97316,#fbbf24)"></div></div></div>
+  </div>
+</div>
+
+<div class="auth-right">
+  <h1 class="auth-title">Welcome back 👋</h1>
+  <p class="auth-subtitle">Sign in to your SchedualAI account</p>
+
+  {% if messages %}
+    {% for msg in messages %}<div class="error-msg">{{ msg }}</div>{% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label class="form-label">Email address</label>
+      <input type="email" name="email" class="form-control" placeholder="you@school.edu" required autofocus
+             value="{{ form.email.value|default:'' }}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input type="password" name="password" class="form-control" placeholder="Your password" required>
+    </div>
+    <button type="submit" class="btn-auth">Sign In →</button>
+  </form>
+
+  <div class="divider">or</div>
+  <p class="auth-link">Don't have an account? <a href="{% url 'register' %}">Create one free</a></p>
+</div>
+
+</body>
+</html>

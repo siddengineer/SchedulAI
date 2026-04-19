@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load timetable_tags %}
+{% block title %}AI Chatbot — SchedualAI{% endblock %}
+{% block page_title %}AI Timetable Assistant{% endblock %}
+ 
+{% block content %}
+<input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+ 
+<div class="chat-container">
+ 
+  <!-- Sidebar -->
+  <div class="chat-sidebar">
+    <div class="card" style="padding:16px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Timetable Context</div>
+      <select id="tt-select" class="form-control" onchange="selectTimetable(this.value)">
+        <option value="">General Chat (No Context)</option>
+        {% for tt in timetables %}
+        <option value="{{ tt.pk }}" {% if active_tt and active_tt.pk == tt.pk %}selected{% endif %}>{{ tt.name }}</option>
+        {% endfor %}
+      </select>
+      {% if active_tt %}
+      <div style="margin-top:10px;padding:10px;background:#ecfdf5;border-radius:8px;font-size:.78rem;color:#065f46">
+        Chatting about: <strong>{{ active_tt.name }}</strong><br>
+        <span style="color:#6b7280">{{ active_tt.lessons.count }} lessons - {{ active_tt.slots.count }} slots</span>
+      </div>
+      {% endif %}
+    </div>
+ 
+    <div class="card" style="padding:16px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Quick Questions</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button onclick="sendQuick('Show me the full timetable summary')" style="text-align:left;background:#f8f7ff;border:1px solid #ede9fe;border-radius:8px;padding:8px 10px;font-size:.78rem;color:#5b4ff5;cursor:pointer;font-family:sans-serif">Show me the full timetable summary</button>
+        <button onclick="sendQuick('Which teacher has the most periods?')" style="text-align:left;background:#f8f7ff;border:1px solid #ede9fe;border-radius:8px;padding:8px 10px;font-size:.78rem;color:#5b4ff5;cursor:pointer;font-family:sans-serif">Which teacher has the most periods?</button>
+        <button onclick="sendQuick('Are there any scheduling conflicts?')" style="text-align:left;background:#f8f7ff;border:1px solid #ede9fe;border-radius:8px;padding:8px 10px;font-size:.78rem;color:#5b4ff5;cursor:pointer;font-family:sans-serif">Are there any scheduling conflicts?</button>
+        <button onclick="sendQuick('Which subjects are on Monday?')" style="text-align:left;background:#f8f7ff;border:1px solid #ede9fe;border-radius:8px;padding:8px 10px;font-size:.78rem;color:#5b4ff5;cursor:pointer;font-family:sans-serif">Which subjects are on Monday?</button>
+        <button onclick="sendQuick('Show faculty workload distribution')" style="text-align:left;background:#f8f7ff;border:1px solid #ede9fe;border-radius:8px;padding:8px 10px;font-size:.78rem;color:#5b4ff5;cursor:pointer;font-family:sans-serif">Show faculty workload distribution</button>
+      </div>
+    </div>
+ 
+    <div class="card" style="padding:16px;background:linear-gradient(135deg,#0f0e1a,#1a1830);border:none">
+      <div style="font-size:.82rem;color:rgba(255,255,255,.9);font-weight:600;margin-bottom:4px">Powered by Groq</div>
+      <div style="font-size:.75rem;color:rgba(168,158,201,.7);line-height:1.5">LLaMA 3 70B model. Fast AI responses for your scheduling queries.</div>
+    </div>
+  </div>
+ 
+  <!-- Main Chat -->
+  <div class="chat-main">
+    <div class="chat-header">
+      <div class="chat-ai-avatar">🤖</div>
+      <div>
+        <div style="font-weight:700;font-size:.95rem">TimetableAI Assistant</div>
+        <div style="font-size:.75rem;color:var(--text-muted)">
+          {% if active_tt %}Context: {{ active_tt.name }}{% else %}General scheduling assistant{% endif %}
+        </div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <div style="width:8px;height:8px;background:#10b981;border-radius:50%"></div>
+        <span style="font-size:.78rem;color:#10b981;font-weight:600">Online</span>
+      </div>
+    </div>
+ 
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg assistant">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">
+          <strong>Hello! I am your TimetableAI Assistant.</strong><br><br>
+          {% if active_tt %}
+          I have loaded <strong>"{{ active_tt.name }}"</strong> and can answer questions about schedules, faculty workload, conflicts, and more.
+          {% else %}
+          Select a timetable from the sidebar for context-aware answers, or ask me general scheduling questions!
+          {% endif %}
+        </div>
+      </div>
+ 
+      {% for msg in messages %}
+      <div class="msg {{ msg.role }}">
+        <div class="msg-avatar">{% if msg.role == 'assistant' %}🤖{% else %}{{ user.get_initials }}{% endif %}</div>
+        <div class="msg-bubble">{{ msg.content|linebreaksbr }}</div>
+      </div>
+      {% endfor %}
+    </div>
+ 
+    <div id="typing-indicator" style="display:none;padding:0 20px 10px">
+      <div class="msg assistant">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble" style="padding:12px 16px">
+          <div class="chat-typing">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="chat-input-area">
+      <textarea id="chat-input" class="chat-input" placeholder="Ask about your timetable (Enter to send, Shift+Enter for newline)" rows="1"></textarea>
+      <button onclick="sendMessage()" class="btn btn-primary" id="send-btn" style="height:44px;padding:0 18px;flex-shrink:0">Send</button>
+    </div>
+  </div>
+ 
+</div>
+{% endblock %}
+ 
+{% block extra_js %}
+<script>
+var currentSessionId = {% if session %}{{ session.id }}{% else %}null{% endif %};
+var currentTtId = {% if active_tt %}{{ active_tt.pk }}{% else %}null{% endif %};
+ 
+var messagesEl = document.getElementById('chat-messages');
+var inputEl = document.getElementById('chat-input');
+var sendBtn = document.getElementById('send-btn');
+var typingEl = document.getElementById('typing-indicator');
+ 
+function getCsrf() {
+  return document.getElementById('csrf-token').value;
+}
+ 
+inputEl.addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+ 
+inputEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+ 
+function scrollBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+scrollBottom();
+ 
+function appendMsg(role, content) {
+  var div = document.createElement('div');
+  div.className = 'msg ' + role;
+  var avatar = role === 'assistant' ? '🤖' : '{{ user.get_initials }}';
+  var formatted = content
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  div.innerHTML = '<div class="msg-avatar">' + avatar + '</div><div class="msg-bubble">' + formatted + '</div>';
+  messagesEl.appendChild(div);
+  scrollBottom();
+}
+ 
+async function sendMessage() {
+  var text = inputEl.value.trim();
+  if (!text) return;
+ 
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  sendBtn.disabled = true;
+  sendBtn.textContent = '...';
+ 
+  appendMsg('user', text);
+  typingEl.style.display = 'block';
+  scrollBottom();
+ 
+  try {
+    var response = await fetch('/chatbot/send/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf()
+      },
+      body: JSON.stringify({
+        message: text,
+        session_id: currentSessionId,
+        timetable_id: currentTtId
+      })
+    });
+ 
+    var data = await response.json();
+    typingEl.style.display = 'none';
+ 
+    if (data.reply) {
+      appendMsg('assistant', data.reply);
+      currentSessionId = data.session_id;
+    } else {
+      appendMsg('assistant', 'Error: ' + (data.error || 'No response. Check GROQ_API_KEY.'));
+    }
+  } catch(err) {
+    typingEl.style.display = 'none';
+    appendMsg('assistant', 'Network error: ' + err.message);
+  }
+ 
+  sendBtn.disabled = false;
+  sendBtn.textContent = 'Send';
+  inputEl.focus();
+}
+ 
+function sendQuick(q) {
+  inputEl.value = q;
+  sendMessage();
+}
+ 
+function selectTimetable(val) {
+  window.location.href = val ? '/chatbot/?timetable=' + val : '/chatbot/';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% load timetable_tags %}
+{% extends 'base.html' %}
+{% block title %}{{ tt.name }} — View{% endblock %}
+{% block page_title %}{{ tt.name }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'timetable_setup' tt.pk %}" class="btn btn-secondary btn-sm">⚙ Setup</a>
+<a href="{% url 'chatbot' %}?timetable={{ tt.pk }}" class="btn btn-sm" style="background:#ede9fe;color:#5b4ff5;border:1px solid #c4b5fd">🤖 Ask AI</a>
+{% if tt.status == 'generated' %}
+<form method="post" action="{% url 'timetable_setup' tt.pk %}" style="display:inline">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="publish">
+  <button class="btn btn-success btn-sm">🚀 Publish</button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+  <span class="badge badge-{% if tt.status == 'published' %}success{% elif tt.status == 'generated' %}primary{% else %}gray{% endif %}">
+    {{ tt.get_status_display }}
+  </span>
+  {% if tt.ai_generated %}<span class="badge badge-primary">🤖 AI Generated</span>{% endif %}
+  {% if tt.bell_schedule %}<span style="font-size:.82rem;color:var(--text-muted)">🔔 {{ tt.bell_schedule.name }}</span>{% endif %}
+  <span style="font-size:.82rem;color:var(--text-muted)">{{ slots|length }} slots · {{ divisions|length }} divisions</span>
+</div>
+
+{% if not slots %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon">📅</div>
+    <div class="empty-title">No timetable generated yet</div>
+    <div class="empty-desc">Go to Setup and click Generate to create the timetable.</div>
+    <a href="{% url 'timetable_setup' tt.pk %}" class="btn btn-primary">Go to Setup</a>
+  </div>
+</div>
+{% else %}
+
+<!-- Division selector tabs -->
+{% if divisions|length > 1 %}
+<div class="tabs" style="overflow-x:auto;flex-wrap:nowrap">
+  <button class="tab active" onclick="showDiv('all', this)">All Divisions</button>
+  {% for div in divisions %}
+  <button class="tab" onclick="showDiv('div-{{ div.pk }}', this)">{{ div }}</button>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ALL DIVISIONS view -->
+<div id="all">
+{% for div in divisions %}
+<div class="card" style="margin-bottom:20px;padding:0;overflow:hidden" data-div="div-{{ div.pk }}">
+  <div style="padding:14px 20px;background:linear-gradient(135deg,#5b4ff5,#7c72f7);display:flex;align-items:center;justify-content:space-between">
+    <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:.95rem">{{ div }}</div>
+    <div style="font-size:.78rem;color:rgba(255,255,255,.75)">
+      {% if div.class_teacher %}Class Teacher: {{ div.class_teacher.name }}{% endif %}
+      {% if div.strength %} · {{ div.strength }} students{% endif %}
+    </div>
+  </div>
+  <div class="tt-grid" style="padding:16px">
+    <table class="tt-table">
+      <thead>
+        <tr>
+          <th>Day / Period</th>
+          {% for period in periods %}
+          <th>
+            P{{ period.period_number }}<br>
+            <span style="font-size:.65rem;opacity:.8;font-weight:400">{{ period.start_time|time:"H:i" }}–{{ period.end_time|time:"H:i" }}</span>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for day in working_days %}
+        <tr>
+          <td class="day-col">{{ day }}</td>
+          {% for period in periods %}
+          <td class="{% if period.period_type != 'class' %}tt-break{% endif %}">
+            {% if period.period_type != 'class' %}
+              <div style="text-align:center;font-size:.72rem;color:var(--text-muted);font-style:italic">{{ period.name }}</div>
+            {% else %}
+              {% with slot=grid|get_item:div.id|get_item:day|get_item:period.id %}
+              {% if slot %}
+              <div class="tt-slot" style="background:{{ slot.lesson.subject.color }}">
+                <div class="subject">{{ slot.lesson.subject.name }}</div>
+                {% if slot.lesson.faculty %}<div class="teacher">👤 {{ slot.lesson.faculty.name }}</div>{% endif %}
+                {% if slot.room %}<div class="room-tag">🚪 {{ slot.room.name }}</div>{% endif %}
+              </div>
+              {% else %}
+              <div class="tt-empty"></div>
+              {% endif %}
+              {% endwith %}
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showDiv(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (id === 'all') {
+    document.querySelectorAll('[data-div]').forEach(el => el.style.display = '');
+  } else {
+    document.querySelectorAll('[data-div]').forEach(el => {
+      el.style.display = el.dataset.div === id ? '' : 'none';
+    });
+  }
+}
+</script>
+{% endblock %}
