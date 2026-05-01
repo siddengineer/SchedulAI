@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+app_name = 'chatbot'
+name = 'index'
 
 urlpatterns = [
     path('', views.chatbot_home, name='chatbot'),

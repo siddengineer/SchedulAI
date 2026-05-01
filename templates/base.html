@@ -373,33 +373,54 @@ textarea.form-control{resize:vertical;min-height:80px}
   <nav class="sidebar-nav">
     <div class="nav-section">
       <div class="nav-label">Overview</div>
-      <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+
+      {# ── Dashboard ── #}
+      <a href="{% url 'dashboard' %}"
+         class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
         <span class="icon">🏠</span><span>Dashboard</span>
       </a>
-      <a href="{% url 'timetable_list' %}" class="nav-link {% if 'timetable' in request.resolver_match.url_name %}active{% endif %}">
+
+      {# ── My Timetables ── #}
+      <a href="{% url 'timetables:list' %}"
+         class="nav-link {% if request.resolver_match.app_name == 'timetables' and request.resolver_match.url_name == 'list' %}active{% endif %}">
         <span class="icon">📋</span><span>My Timetables</span>
       </a>
-      <a href="{% url 'bell_list' %}" class="nav-link {% if 'bell' in request.resolver_match.url_name %}active{% endif %}">
+
+      {# ── Bell Schedules ── replace 'timetables:bell' with your actual URL name #}
+      <a href="{% url 'timetables:bells' %}"
+         class="nav-link {% if request.resolver_match.app_name == 'timetables' and request.resolver_match.url_name == 'bells' %}active{% endif %}">
         <span class="icon">🔔</span><span>Bell Schedules</span>
       </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Data</div>
-      <a href="{% url 'faculty_list' %}" class="nav-link {% if request.resolver_match.url_name == 'faculty_list' %}active{% endif %}">
+
+      {# ── Faculty ── #}
+      <a href="{% url 'faculty:list' %}"
+         class="nav-link {% if request.resolver_match.app_name == 'faculty' %}active{% endif %}">
         <span class="icon">👨‍🏫</span><span>Faculty</span>
       </a>
-      <a href="{% url 'resources' %}?tab=classes" class="nav-link {% if request.resolver_match.url_name == 'resources' %}active{% endif %}">
-        <span class="icon">🏫</span><span>Classes & Rooms</span>
+
+      {# ── Classes & Rooms ── #}
+      <a href="{% url 'resources:resources' %}?tab=classes"
+         class="nav-link {% if request.resolver_match.app_name == 'resources' %}active{% endif %}">
+        <span class="icon">🏫</span><span>Classes &amp; Rooms</span>
       </a>
     </div>
 
     <div class="nav-section">
       <div class="nav-label">Insights</div>
-      <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+
+      {# ── Reports ── #}
+      <a href="{% url 'reports:reports' %}"
+         class="nav-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
         <span class="icon">📊</span><span>Reports</span>
       </a>
-      <a href="{% url 'chatbot' %}" class="nav-link {% if request.resolver_match.url_name == 'chatbot' %}active{% endif %}">
+
+      {# ── AI Chatbot ── #}
+      <a href="{% url 'chatbot:chatbot' %}"
+         class="nav-link {% if request.resolver_match.app_name == 'chatbot' %}active{% endif %}">
         <span class="icon">🤖</span><span>AI Chatbot</span>
         <span class="badge">AI</span>
       </a>

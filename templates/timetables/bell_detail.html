@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ bell.name }} — SchedualAI{% endblock %}
+{% block page_title %}🔔 {{ bell.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'timetables:bells' %}" class="btn btn-secondary">← Back to Bell Schedules</a>
+  <a href="{% url 'timetables:add-period' bell.pk %}" class="btn btn-primary">+ Add Period</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:18px">
+  <div class="card-header">
+    <div>
+      <div class="card-title">{{ bell.name }}</div>
+      <div class="card-subtitle">Working days: {{ bell.working_days|join:', ' }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Type</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for period in periods %}
+        <tr>
+          <td><strong>{{ period.period_number }}</strong></td>
+          <td>{{ period.name }}</td>
+          <td>{{ period.start_time|time:"H:i" }}</td>
+          <td>{{ period.end_time|time:"H:i" }}</td>
+          <td>
+            <span class="badge badge-{% if period.period_type == 'class' %}primary{% elif period.period_type == 'break' %}warning{% else %}gray{% endif %}">
+              {{ period.get_period_type_display }}
+            </span>
+          </td>
+          <td>
+            <form method="post" action="{% url 'timetables:delete-period' bell.pk period.pk %}"
+                  onsubmit="return confirm('Delete this period?')">
+              {% csrf_token %}
+              <button type="submit" class="btn-icon">🗑</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">
+            No periods yet. Click "+ Add Period" to get started.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

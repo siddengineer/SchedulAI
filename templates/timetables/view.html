@@ -1,96 +1,447 @@
-{% load timetable_tags %}
+
+
 {% extends 'base.html' %}
-{% block title %}{{ tt.name }} — View{% endblock %}
-{% block page_title %}{{ tt.name }}{% endblock %}
+{% load static %}
+{% load timetable_tags %}
+{% block title %}
+  {% if live_mode %}Live View{% else %}{{ timetable.name }}{% endif %} — SchedulAI
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── timetable grid ── */
+  .tt-wrap   { overflow-x: auto; background:#fff; border:1px solid #e5e3dd;
+               border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .tt-table  { width:100%; border-collapse:collapse; min-width:580px; font-size:12px; }
+  .tt-table thead th {
+    padding:10px 8px; text-align:center;
+    font-family:'Syne',sans-serif; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.05em; color:#6b7280;
+    background:#f7f6f3; border-bottom:1.5px solid #e5e3dd; white-space:nowrap;
+  }
+  .tt-table thead th.th-period { text-align:left; padding-left:14px; width:82px; }
+  .tt-table tbody td { padding:3px 3px; vertical-align:top;
+    border-bottom:1px solid #f0eeea; border-right:1px solid #f5f4f0; }
+  .tt-table tbody td:last-child { border-right:none; }
+  .tt-table tbody tr:last-child td { border-bottom:none; }
+
+  .td-period { padding:8px 14px; background:#f7f6f3;
+               border-right:1.5px solid #e5e3dd !important; }
+  .td-period .pnum { font-family:'Syne',sans-serif; font-size:12px;
+                     font-weight:700; color:#374151; }
+  .td-period .ptime { font-size:10px; color:#9ca3af; margin-top:1px; }
+
+  .tt-cell { min-height:66px; padding:6px 8px; border-radius:8px;
+             transition:transform .12s, opacity .12s; cursor:default; }
+  .tt-cell:hover { transform:scale(1.04); opacity:.88; }
+  .tt-cell .cs  { font-weight:700; font-size:12px; line-height:1.3; margin-bottom:2px; }
+  .tt-cell .cf  { font-size:11px; opacity:.75; line-height:1.3; }
+  .tt-cell .cr  { font-size:10px; opacity:.55; margin-top:2px; }
+
+  .tt-empty { min-height:66px; border-radius:8px;
+              border:1.5px dashed #e5e3dd; background:#fafaf9;
+              display:flex; align-items:center; justify-content:center;
+              color:#d1d5db; font-size:18px; }
+
+  .tt-break-row  td { background:#fffbeb; }
+  .tt-break-cell { padding:6px 14px; font-size:11px; font-weight:600;
+                   color:#92400e; text-align:center; letter-spacing:.03em; }
+
+  /* division tabs */
+  .div-tabs  { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .div-tab   { padding:5px 14px; border-radius:100px; font-size:12.5px;
+               font-weight:600; color:#6b7280; background:#fff;
+               border:1.5px solid #e5e3dd; cursor:pointer;
+               transition:all .15s; font-family:inherit; }
+  .div-tab:hover { border-color:#4f46e5; color:#4f46e5; }
+  .div-tab.active { background:#4f46e5; border-color:#4f46e5; color:#fff; }
+
+  /* live cards */
+  @keyframes livepulse {
+    0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.4);}
+    50%    {box-shadow:0 0 0 10px rgba(16,185,129,0);}
+  }
+  .live-dot { width:9px; height:9px; background:#10b981; border-radius:50%;
+              display:inline-block; animation:livepulse 2s infinite; }
+  .live-card { background:#fff; border:2px solid #10b981; border-radius:14px;
+               padding:16px; box-shadow:0 4px 20px rgba(16,185,129,.12); }
+  .next-card { background:#fff; border:1.5px solid #e5e3dd; border-radius:14px;
+               padding:14px; opacity:.85; }
+
+  /* email modal */
+  .modal-bg  { display:none; position:fixed; inset:0; z-index:9999;
+               background:rgba(0,0,0,.5); backdrop-filter:blur(4px);
+               align-items:center; justify-content:center; }
+  .modal-bg.open { display:flex; }
+  .modal-box { width:520px; max-width:95vw; background:#fff;
+               border-radius:20px; overflow:hidden;
+               box-shadow:0 40px 80px rgba(0,0,0,.2);
+               animation:modal-in .2s ease; }
+  @keyframes modal-in {
+    from{opacity:0;transform:scale(.95) translateY(8px);}
+    to  {opacity:1;transform:scale(1)   translateY(0);}
+  }
+  .modal-scroll { max-height:340px; overflow-y:auto; }
+
+  /* generation spinner */
+  @keyframes spin { to{transform:rotate(360deg);} }
+  .gen-spinner { width:44px; height:44px;
+    border:4px solid #ede9fe; border-top-color:#4f46e5;
+    border-radius:50%; animation:spin .9s linear infinite; margin:0 auto 14px; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav class="breadcrumb">
+  <a href="{% url 'timetables:list' %}">Timetables</a>
+  <span class="breadcrumb-sep">/</span>
+  {% if live_mode %}
+    <a href="{% url 'timetables:view' pk=timetable.pk %}">{{ timetable.name }}</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Live View</span>
+  {% else %}
+    <span class="breadcrumb-current">{{ timetable.name }}</span>
+  {% endif %}
+</nav>
+{% endblock %}
 
 {% block topbar_actions %}
-<a href="{% url 'timetable_setup' tt.pk %}" class="btn btn-secondary btn-sm">⚙ Setup</a>
-<a href="{% url 'chatbot' %}?timetable={{ tt.pk }}" class="btn btn-sm" style="background:#ede9fe;color:#5b4ff5;border:1px solid #c4b5fd">🤖 Ask AI</a>
-{% if tt.status == 'generated' %}
-<form method="post" action="{% url 'timetable_setup' tt.pk %}" style="display:inline">
-  {% csrf_token %}
-  <input type="hidden" name="action" value="publish">
-  <button class="btn btn-success btn-sm">🚀 Publish</button>
-</form>
+{% if not live_mode %}
+  <!-- Status badge -->
+  <span class="badge
+    {% if timetable.status == 'published' %}badge-green
+    {% elif timetable.status == 'generated' %}badge-blue
+    {% elif timetable.status == 'generating' %}badge-amber
+    {% elif timetable.status == 'failed' %}badge-red
+    {% else %}badge-gray{% endif %}">
+    {{ timetable.get_status_display }}
+  </span>
+
+  <!-- Live Now -->
+  <a href="{% url 'timetables:live' pk=timetable.pk %}"
+     class="btn btn-secondary btn-sm"
+     style="border-color:#10b981;color:#059669;gap:6px;">
+    <span class="live-dot"></span> Live Now
+  </a>
+
+  <!-- Excel -->
+  <a href="{% url 'timetables:export-excel' pk=timetable.pk %}"
+     class="btn btn-secondary btn-sm">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+         style="width:14px;height:14px;">
+      <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+               a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+    </svg>
+    Excel
+  </a>
+
+  <!-- PDF -->
+  <a href="{% url 'timetables:export-pdf' pk=timetable.pk %}"
+     class="btn btn-secondary btn-sm">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+         style="width:14px;height:14px;">
+      <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414
+               A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+    </svg>
+    PDF
+  </a>
+
+  <!-- Send Email -->
+  <button onclick="document.getElementById('email-modal').classList.add('open')"
+          class="btn btn-primary btn-sm">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+         style="width:14px;height:14px;">
+      <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8
+               M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0
+               00-2 2v10a2 2 0 002 2z"/>
+    </svg>
+    Send via Email
+  </button>
+
+  {% if timetable.status == 'generated' and user.can_manage %}
+  <form method="post" action="{% url 'timetables:publish' pk=timetable.pk %}"
+        style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm"
+            style="background:#10b981;color:#fff;">Publish</button>
+  </form>
+  {% endif %}
+
+{% else %}
+  <!-- Live mode top bar -->
+  <span style="display:flex;align-items:center;gap:7px;font-size:13px;
+               font-weight:600;color:#059669;">
+    <span class="live-dot"></span>
+    Live · {{ now|time:"H:i" }}
+  </span>
+  <a href="{% url 'timetables:view' pk=timetable.pk %}"
+     class="btn btn-secondary btn-sm">← Grid View</a>
+  <button onclick="location.reload()" class="btn btn-secondary btn-sm">⟳ Refresh</button>
 {% endif %}
 {% endblock %}
 
-{% block content %}
-<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-  <span class="badge badge-{% if tt.status == 'published' %}success{% elif tt.status == 'generated' %}primary{% else %}gray{% endif %}">
-    {{ tt.get_status_display }}
-  </span>
-  {% if tt.ai_generated %}<span class="badge badge-primary">🤖 AI Generated</span>{% endif %}
-  {% if tt.bell_schedule %}<span style="font-size:.82rem;color:var(--text-muted)">🔔 {{ tt.bell_schedule.name }}</span>{% endif %}
-  <span style="font-size:.82rem;color:var(--text-muted)">{{ slots|length }} slots · {{ divisions|length }} divisions</span>
-</div>
 
-{% if not slots %}
-<div class="card">
-  <div class="empty-state">
-    <div class="empty-icon">📅</div>
-    <div class="empty-title">No timetable generated yet</div>
-    <div class="empty-desc">Go to Setup and click Generate to create the timetable.</div>
-    <a href="{% url 'timetable_setup' tt.pk %}" class="btn btn-primary">Go to Setup</a>
+{% block content %}
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#  LIVE MODE                                                      #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% if live_mode %}
+
+<!-- Dark status bar -->
+<div class="card mb-5"
+     style="background:linear-gradient(135deg,#0f0e17,#1e1b4b);border-color:#1e1b4b;">
+  <div style="display:flex;align-items:center;justify-content:space-between;
+              flex-wrap:wrap;gap:16px;">
+    <!-- Day -->
+    <div>
+      <div style="font-size:11px;color:#6d7891;font-weight:700;
+                  text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Today</div>
+      <div style="font-family:'Syne',sans-serif;font-size:28px;
+                  font-weight:800;color:#fff;">{{ current_day_name }}</div>
+      <div style="font-size:13px;color:#8b96b0;margin-top:2px;">{{ now|date:"d F Y" }}</div>
+    </div>
+    <!-- Current period -->
+    {% if current_period %}
+    <div style="text-align:center;background:rgba(255,255,255,.08);
+                border-radius:12px;padding:16px 24px;">
+      <div style="font-size:11px;color:#8b96b0;font-weight:700;
+                  text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">
+        Current Period</div>
+      <div style="font-family:'Syne',sans-serif;font-size:28px;
+                  font-weight:800;color:#10b981;">P{{ current_period.period_number }}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.55);">
+        {{ current_period.start_time|time:"H:i" }} – {{ current_period.end_time|time:"H:i" }}
+      </div>
+    </div>
+    {% elif is_working_day %}
+    <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:16px 24px;
+                text-align:center;">
+      <div style="font-size:18px;color:#fff;font-weight:700;">Between Periods</div>
+      {% if next_period %}
+      <div style="font-size:13px;color:#8b96b0;margin-top:4px;">
+        Next: P{{ next_period.period_number }} at {{ next_period.start_time|time:"H:i" }}</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:16px 24px;">
+      <div style="font-size:18px;color:#fff;font-weight:700;">No Classes Today</div>
+      <div style="font-size:13px;color:#8b96b0;">Weekend / Holiday</div>
+    </div>
+    {% endif %}
+    <!-- Next period -->
+    {% if next_period %}
+    <div style="text-align:center;background:rgba(255,255,255,.06);
+                border-radius:12px;padding:16px 24px;">
+      <div style="font-size:11px;color:#8b96b0;font-weight:700;
+                  text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Up Next</div>
+      <div style="font-family:'Syne',sans-serif;font-size:24px;
+                  font-weight:800;color:#a78bfa;">P{{ next_period.period_number }}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5);">
+        {{ next_period.start_time|time:"H:i" }}</div>
+    </div>
+    {% endif %}
   </div>
 </div>
-{% else %}
 
-<!-- Division selector tabs -->
-{% if divisions|length > 1 %}
-<div class="tabs" style="overflow-x:auto;flex-wrap:nowrap">
-  <button class="tab active" onclick="showDiv('all', this)">All Divisions</button>
-  {% for div in divisions %}
-  <button class="tab" onclick="showDiv('div-{{ div.pk }}', this)">{{ div }}</button>
+<!-- Current slots -->
+{% if current_slots %}
+<div class="mb-5">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <span class="live-dot"></span>
+    <h2 style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#0f0e17;">
+      Happening Right Now — P{{ current_period.period_number }}
+      ({{ current_period.start_time|time:"H:i" }}–{{ current_period.end_time|time:"H:i" }})
+    </h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
+    {% for slot in current_slots %}
+    <div class="live-card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:9px;">
+        <span style="font-size:11px;font-weight:700;background:#d1fae5;color:#059669;
+                     padding:2px 8px;border-radius:100px;">🟢 Live</span>
+        <span style="font-size:11px;color:#9ca3af;">{{ slot.division }}</span>
+      </div>
+      <div style="font-size:15px;font-weight:800;font-family:'Syne',sans-serif;
+                  color:{{ slot.subject.color }};margin-bottom:3px;">
+        {{ slot.subject.name }}</div>
+      <div style="font-size:13px;color:#374151;font-weight:500;margin-bottom:2px;">
+        👤 {{ slot.faculty.name }}</div>
+      {% if slot.room %}
+      <div style="font-size:11.5px;color:#9ca3af;">🚪 {{ slot.room.name }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% elif is_working_day %}
+<div class="card mb-5" style="text-align:center;padding:40px;">
+  <div style="font-size:34px;margin-bottom:8px;">☕</div>
+  <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#374151;">
+    {% if current_period %}No classes this period{% else %}Between periods{% endif %}
+  </div>
+  {% if next_period %}
+  <div style="font-size:13px;color:#9ca3af;margin-top:4px;">
+    Next period at {{ next_period.start_time|time:"H:i" }}</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Today full schedule -->
+{% if today_slots %}
+<h2 style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
+           color:#0f0e17;margin-bottom:12px;">
+  Today's Full Schedule — {{ current_day_name }}
+</h2>
+<div style="display:flex;flex-direction:column;gap:14px;">
+  {% for div_name, div_slots in today_slots.items %}
+  <div class="card card-sm">
+    <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+                color:#4f46e5;margin-bottom:10px;display:flex;align-items:center;gap:7px;">
+      <span style="width:7px;height:7px;background:#4f46e5;
+                   border-radius:50%;display:inline-block;"></span>
+      {{ div_name }}
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      {% for slot in div_slots %}
+      <div style="flex:1;min-width:120px;padding:9px 11px;border-radius:9px;
+                  background:{{ slot.subject.color }}18;
+                  border:1.5px solid {{ slot.subject.color }}35;
+                  {% if current_period and slot.period_id == current_period.pk %}
+                    border-color:{{ slot.subject.color }};
+                    box-shadow:0 0 0 2px {{ slot.subject.color }}30;
+                  {% endif %}">
+        <div style="font-size:10px;color:#9ca3af;font-weight:600;margin-bottom:2px;">
+          P{{ slot.period.period_number }} · {{ slot.period.start_time|time:"H:i" }}
+          {% if current_period and slot.period_id == current_period.pk %}
+          <span style="background:#10b981;color:#fff;padding:1px 5px;
+                       border-radius:100px;font-size:9px;margin-left:3px;">NOW</span>
+          {% endif %}
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:{{ slot.subject.color }};">
+          {{ slot.subject.name }}</div>
+        <div style="font-size:11px;color:#6b7280;">{{ slot.faculty.name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
   {% endfor %}
 </div>
 {% endif %}
 
-<!-- ALL DIVISIONS view -->
-<div id="all">
+<script>setTimeout(()=>location.reload(), 120000);</script>
+
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#  GRID MODE                                                      #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% else %}
+
+<!-- Generating spinner -->
+{% if timetable.status == 'generating' %}
+<div style="background:#fff;border:1px solid #c4b5fd;border-radius:16px;
+            padding:36px;text-align:center;margin-bottom:20px;" id="gen-card">
+  <div class="gen-spinner"></div>
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+              color:#0f0e17;margin-bottom:6px;">AI is generating your timetable…</div>
+  <div style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+    Usually takes 10–30 seconds. This page refreshes automatically.</div>
+  {% if timetable.generation_log %}
+  <div style="background:#f7f6f3;border:1px solid #e5e3dd;border-radius:8px;
+              padding:10px;font-family:monospace;font-size:11.5px;color:#6b7280;
+              max-height:120px;overflow-y:auto;text-align:left;">
+    {{ timetable.generation_log }}</div>
+  {% endif %}
+</div>
+<script>
+(function poll(){
+  setTimeout(function(){
+    fetch('{% url "timetables:status" pk=timetable.pk %}')
+      .then(r=>r.json())
+      .then(d=>{ if(d.status!=='generating') location.reload(); else poll(); })
+      .catch(poll);
+  }, 2500);
+})();
+</script>
+{% endif %}
+
+{% if timetable.status == 'failed' %}
+<div class="alert alert-error mb-4">
+  ✗ <strong>Generation failed:</strong> {{ timetable.generation_log }}
+  <a href="{% url 'timetables:setup' pk=timetable.pk %}"
+     style="margin-left:8px;font-weight:700;">← Back to setup</a>
+</div>
+{% endif %}
+
+<!-- Division tabs -->
+{% if divisions %}
+<div class="div-tabs">
+  {% for div in divisions %}
+  <button class="div-tab {% if forloop.first %}active{% endif %}"
+          id="tab-{{ div.pk }}"
+          onclick="showDiv('{{ div.pk }}', this)">
+    {{ div }}
+  </button>
+  {% endfor %}
+</div>
+
+<!-- Grid per division -->
 {% for div in divisions %}
-<div class="card" style="margin-bottom:20px;padding:0;overflow:hidden" data-div="div-{{ div.pk }}">
-  <div style="padding:14px 20px;background:linear-gradient(135deg,#5b4ff5,#7c72f7);display:flex;align-items:center;justify-content:space-between">
-    <div style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:.95rem">{{ div }}</div>
-    <div style="font-size:.78rem;color:rgba(255,255,255,.75)">
-      {% if div.class_teacher %}Class Teacher: {{ div.class_teacher.name }}{% endif %}
-      {% if div.strength %} · {{ div.strength }} students{% endif %}
-    </div>
-  </div>
-  <div class="tt-grid" style="padding:16px">
+<div id="grid-{{ div.pk }}" {% if not forloop.first %}style="display:none;"{% endif %}>
+  <div class="tt-wrap">
     <table class="tt-table">
       <thead>
         <tr>
-          <th>Day / Period</th>
-          {% for period in periods %}
-          <th>
-            P{{ period.period_number }}<br>
-            <span style="font-size:.65rem;opacity:.8;font-weight:400">{{ period.start_time|time:"H:i" }}–{{ period.end_time|time:"H:i" }}</span>
-          </th>
+          <th class="th-period">Period</th>
+          {% for day_num, day_name in working_days %}
+          <th>{{ day_name }}</th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
-        {% for day in working_days %}
+        {% for period in periods %}
+        {# --- Break before this period? --- #}
+        {% for brk in break_periods %}
+          {% if brk.period_number == period.period_number %}
+          <tr class="tt-break-row">
+            <td class="td-period" style="background:#fffbeb;">
+              <div class="pnum" style="color:#92400e;">Break</div>
+              <div class="ptime">{{ brk.start_time|time:"H:i" }}–{{ brk.end_time|time:"H:i" }}</div>
+            </td>
+            <td colspan="{{ working_days|length }}" class="tt-break-cell">
+              🍽 {{ brk.label|default:"Break" }} &nbsp;·&nbsp;
+              {{ brk.start_time|time:"H:i" }}–{{ brk.end_time|time:"H:i" }}
+            </td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+
         <tr>
-          <td class="day-col">{{ day }}</td>
-          {% for period in periods %}
-          <td class="{% if period.period_type != 'class' %}tt-break{% endif %}">
-            {% if period.period_type != 'class' %}
-              <div style="text-align:center;font-size:.72rem;color:var(--text-muted);font-style:italic">{{ period.name }}</div>
-            {% else %}
-              {% with slot=grid|get_item:div.id|get_item:day|get_item:period.id %}
-              {% if slot %}
-              <div class="tt-slot" style="background:{{ slot.lesson.subject.color }}">
-                <div class="subject">{{ slot.lesson.subject.name }}</div>
-                {% if slot.lesson.faculty %}<div class="teacher">👤 {{ slot.lesson.faculty.name }}</div>{% endif %}
-                {% if slot.room %}<div class="room-tag">🚪 {{ slot.room.name }}</div>{% endif %}
-              </div>
-              {% else %}
-              <div class="tt-empty"></div>
+          <td class="td-period">
+            <div class="pnum">P{{ period.period_number }}</div>
+            <div class="ptime">{{ period.start_time|time:"H:i" }}–{{ period.end_time|time:"H:i" }}</div>
+          </td>
+          {% for day_num, day_name in working_days %}
+          <td style="padding:3px;">
+            {% with ds=slot_map|get_div:div.pk %}
+            {% with ps=ds|get_day:day_num %}
+            {% with slot=ps|get_period:period.pk %}
+            {% if slot %}
+            <div class="tt-cell"
+                 style="background:{{ slot.subject.color }}1a;
+                        border:1.5px solid {{ slot.subject.color }}40;"
+                 title="{{ slot.subject.name }} | {{ slot.faculty.name }}{% if slot.room %} | {{ slot.room.name }}{% endif %}">
+              <div class="cs" style="color:{{ slot.subject.color }};">
+                {{ slot.subject.name }}</div>
+              <div class="cf">{{ slot.faculty.name }}</div>
+              {% if slot.room %}
+              <div class="cr">🚪 {{ slot.room.name }}</div>
               {% endif %}
-              {% endwith %}
+            </div>
+            {% else %}
+            <div class="tt-empty">—</div>
             {% endif %}
+            {% endwith %}{% endwith %}{% endwith %}
           </td>
           {% endfor %}
         </tr>
@@ -100,24 +451,196 @@
   </div>
 </div>
 {% endfor %}
-</div>
 
+{% else %}
+<!-- No divisions / no slots yet -->
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0
+                 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <div class="empty-title">No timetable generated yet</div>
+    <div class="empty-sub">Go to setup and click Generate.</div>
+    <a href="{% url 'timetables:setup' pk=timetable.pk %}" class="btn btn-primary">
+      Go to Setup →</a>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}{# end if live_mode #}
+
+
+{# ═══════════════════════════════════════════════════════════════ #}
+{#  EMAIL MODAL                                                    #}
+{# ═══════════════════════════════════════════════════════════════ #}
+{% if not live_mode %}
+<div class="modal-bg" id="email-modal">
+  <div class="modal-box">
+
+    <!-- Header -->
+    <div style="background:#4f46e5;padding:20px 24px;
+                display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;
+                    font-weight:800;color:#fff;">📧 Send Timetable via Email</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;">
+          Each faculty receives their own personal schedule</div>
+      </div>
+      <button onclick="document.getElementById('email-modal').classList.remove('open')"
+              style="background:rgba(255,255,255,.2);border:none;color:#fff;
+                     width:30px;height:30px;border-radius:50%;cursor:pointer;
+                     font-size:16px;display:flex;align-items:center;justify-content:center;">
+        ✕
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:18px 24px;">
+      <!-- Select all row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+                  margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;
+                      font-size:13.5px;font-weight:600;">
+          <input type="checkbox" id="chk-all" onchange="toggleAll(this)"
+                 style="width:16px;height:16px;accent-color:#4f46e5;">
+          Select All
+        </label>
+        <span id="sel-count" style="font-size:12px;color:#9ca3af;">0 selected</span>
+      </div>
+      <hr style="border:none;border-top:1px solid #e5e3dd;margin-bottom:10px;">
+    </div>
+
+    <!-- Scrollable faculty list -->
+    <div class="modal-scroll" style="padding:0 24px 6px;">
+      {% for f in faculty_with_email %}
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;
+                    border:1.5px solid #e5e3dd;border-radius:10px;cursor:pointer;
+                    transition:border-color .15s;margin-bottom:6px;"
+             onmouseover="this.style.borderColor='#c4b5fd'"
+             onmouseout="this.style.borderColor=this.querySelector('input').checked?'#4f46e5':'#e5e3dd'">
+        <input type="checkbox" name="fchk" value="{{ f.id }}"
+               onchange="countSelected()"
+               style="width:16px;height:16px;accent-color:#4f46e5;flex-shrink:0;">
+        <div style="width:32px;height:32px;background:#ede9fe;border-radius:50%;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:11px;font-weight:700;color:#4f46e5;flex-shrink:0;">
+          {{ f.name|slice:":2"|upper }}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13.5px;color:#0f0e17;">{{ f.name }}</div>
+          <div style="font-size:11.5px;color:#9ca3af;white-space:nowrap;
+                      overflow:hidden;text-overflow:ellipsis;">{{ f.email }}</div>
+        </div>
+      </label>
+      {% empty %}
+      <div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;">
+        No faculty with email addresses found.<br>
+        <a href="{% url 'faculty:list' %}" style="color:#4f46e5;font-weight:600;">
+          Add emails to faculty →</a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:14px 24px;border-top:1px solid #e5e3dd;
+                display:flex;align-items:center;gap:10px;background:#fafaf9;">
+      <button onclick="document.getElementById('email-modal').classList.remove('open')"
+              class="btn btn-secondary btn-sm" style="flex:1;">Cancel</button>
+      <button onclick="sendEmails()" id="send-btn"
+              class="btn btn-primary btn-sm" style="flex:2;" disabled>
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+             style="width:14px;height:14px;">
+          <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8
+                   M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5
+                   a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Send Emails
+      </button>
+    </div>
+
+    <!-- Result banner -->
+    <div id="email-result" style="display:none;padding:12px 24px;font-size:13.5px;"></div>
+
+  </div>
+</div>
 {% endif %}
 
 {% endblock %}
 
+
 {% block extra_js %}
+{% if not live_mode %}
 <script>
-function showDiv(id, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+/* ── Division switching ── */
+function showDiv(pk, btn) {
+  document.querySelectorAll('[id^="grid-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.div-tab').forEach(b  => b.classList.remove('active'));
+  document.getElementById('grid-' + pk).style.display = 'block';
   btn.classList.add('active');
-  if (id === 'all') {
-    document.querySelectorAll('[data-div]').forEach(el => el.style.display = '');
-  } else {
-    document.querySelectorAll('[data-div]').forEach(el => {
-      el.style.display = el.dataset.div === id ? '' : 'none';
+}
+
+/* ── Email modal helpers ── */
+function toggleAll(master) {
+  document.querySelectorAll('input[name="fchk"]').forEach(cb => cb.checked = master.checked);
+  countSelected();
+}
+
+function countSelected() {
+  const n = document.querySelectorAll('input[name="fchk"]:checked').length;
+  document.getElementById('sel-count').textContent = n + ' selected';
+  document.getElementById('send-btn').disabled = (n === 0);
+  const total = document.querySelectorAll('input[name="fchk"]').length;
+  document.getElementById('chk-all').checked = (n === total && total > 0);
+}
+
+async function sendEmails() {
+  const btn = document.getElementById('send-btn');
+  const ids  = [...document.querySelectorAll('input[name="fchk"]:checked')]
+                 .map(c => parseInt(c.value));
+  btn.disabled  = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    const resp = await fetch('{% url "timetables:send-email" pk=timetable.pk %}', {
+      method : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken' : '{{ csrf_token }}',
+      },
+      body: JSON.stringify({ faculty_ids: ids }),
     });
+    const data = await resp.json();
+    const res  = document.getElementById('email-result');
+    res.style.display = 'block';
+    if (data.success) {
+      res.style.cssText += ';background:#f0fdf4;color:#166534;border-top:1px solid #bbf7d0;';
+      res.innerHTML = `✓ <strong>Sent to ${data.sent_to.length} faculty:</strong>
+                       ${data.sent_to.join(', ')}` +
+        (data.errors.length
+          ? `<br><span style="color:#ef4444">Errors: ${data.errors.join(', ')}</span>` : '');
+    } else {
+      res.style.cssText += ';background:#fef2f2;color:#991b1b;border-top:1px solid #fecaca;';
+      res.textContent = '✗ ' + data.error;
+    }
+  } catch(e) {
+    const res = document.getElementById('email-result');
+    res.style.display = 'block';
+    res.style.cssText += ';background:#fef2f2;color:#991b1b;';
+    res.textContent = '✗ Network error. Try again.';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2"
+      viewBox="0 0 24 24" style="width:14px;height:14px;">
+      <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7
+               a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      Send Emails`;
   }
 }
 </script>
+{% endif %}
 {% endblock %}
+
+

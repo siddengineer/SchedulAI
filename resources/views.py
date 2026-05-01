@@ -31,7 +31,7 @@ def add_grade(request):
                     if d:
                         Division.objects.create(grade=grade, name=d, strength=request.POST.get('strength', 40))
             messages.success(request, f'Grade "{name}" added successfully.')
-    return redirect('resources')
+    return redirect('resources:resources')
 
 @login_required
 def add_room(request):
@@ -47,7 +47,7 @@ def add_room(request):
                 building=request.POST.get('building', ''),
             )
             messages.success(request, f'Room "{name}" added successfully.')
-    return redirect('resources')
+    return redirect('resources:resources')
 
 @login_required
 def add_subject(request):
@@ -62,25 +62,25 @@ def add_subject(request):
                 color=request.POST.get('color', '#6366f1'),
             )
             messages.success(request, f'Subject "{name}" added successfully.')
-    return redirect('resources')
+    return redirect('resources:resources')
 
 @login_required
 def delete_grade(request, pk):
     grade = get_object_or_404(Grade, pk=pk, owner=request.user)
     grade.delete()
     messages.success(request, 'Grade deleted.')
-    return redirect('resources')
+    return redirect('resources:resources')
 
 @login_required
 def delete_room(request, pk):
     room = get_object_or_404(Room, pk=pk, owner=request.user)
     room.delete()
     messages.success(request, 'Room deleted.')
-    return redirect('resources')
+    return redirect('resources:resources')
 
 @login_required
 def delete_subject(request, pk):
     subject = get_object_or_404(Subject, pk=pk, owner=request.user)
     subject.delete()
     messages.success(request, 'Subject deleted.')
-    return redirect('resources')
+    return redirect('resources:resources')

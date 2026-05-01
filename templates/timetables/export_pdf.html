@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ timetable.name }}</title>
+  <style>
+    body { font-family: sans-serif; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+    th { background: #f0f0f0; font-weight: bold; }
+    h1 { font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>{{ timetable.name }}</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Day</th><th>Period</th><th>Division</th>
+        <th>Subject</th><th>Faculty</th><th>Room</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for slot in slots %}
+      <tr>
+        <td>{{ slot.day }}</td>
+        <td>{{ slot.period.period_number }}</td>
+        <td>{{ slot.lesson.division }}</td>
+        <td>{{ slot.lesson.subject.name }}</td>
+        <td>{{ slot.lesson.faculty.name }}</td>
+        <td>{{ slot.room.name|default:"-" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

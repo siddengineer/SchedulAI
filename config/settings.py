@@ -20,6 +20,9 @@ INSTALLED_APPS = [
     'resources',
     'chatbot',
     'reports',
+    'dashboard',
+    'django.contrib.sites',
+
 ]
 
 MIDDLEWARE = [
@@ -30,8 +33,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'accounts.middleware.OrgMiddleware',
 ]
-
+LOGIN_URL = '/'
+ 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000']
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [{
@@ -47,6 +56,15 @@ TEMPLATES = [{
         ],
     },
 }]
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'siddharth20online@gmail.com'
+EMAIL_HOST_PASSWORD = 'jvgtefqukntnzmzd'
+DEFAULT_FROM_EMAIL = 'siddharth20online@gmail.com'
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
@@ -66,7 +84,9 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
-
+# settings.py — for development, just print to console
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@schedulai.com'
 STATIC_URL = '/static/'
 # STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []

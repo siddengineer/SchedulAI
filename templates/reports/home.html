@@ -15,7 +15,7 @@
       <option value="{{ tt.pk }}" {% if selected_tt and selected_tt.pk == tt.pk %}selected{% endif %}>{{ tt.name }}</option>
       {% endfor %}
     </select>
-    {% if selected_tt %}<button type="button" onclick="window.location='{% url 'reports' %}'" class="btn btn-secondary btn-sm">✕ Clear</button>{% endif %}
+    {% if selected_tt %}<button type="button" onclick="window.location='{% url 'reports:reports' %}'" class="btn btn-secondary btn-sm">✕ Clear</button>{% endif %}
   </form>
 </div>
 

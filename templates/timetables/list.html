@@ -1,98 +1,91 @@
 {% extends 'base.html' %}
-{% block title %}Timetables — SchedualAI{% endblock %}
-{% block page_title %}My Timetables{% endblock %}
-
-{% block topbar_actions %}
-<button class="btn btn-primary" onclick="openModal('modal-create')">+ New Timetable</button>
+{% load static %}
+{% block title %}My Timetables — SchedulAI{% endblock %}
+ 
+{% block breadcrumb %}
+  <span class="page-title">My Timetables</span>
 {% endblock %}
-
+ 
+{% block topbar_actions %}
+  <a href="{% url 'timetables:create' %}" class="btn btn-primary btn-sm">
+    <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"
+         style="width:14px;height:14px;"><path d="M12 4v16m8-8H4"/></svg>
+    New Timetable
+  </a>
+{% endblock %}
+ 
 {% block content %}
-
+ 
 {% if timetables %}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">
+<div style="display:flex;flex-direction:column;gap:10px;">
   {% for tt in timetables %}
-  <div class="card" style="padding:0;overflow:hidden">
-    <div style="height:5px;background:{% if tt.status == 'published' %}linear-gradient(90deg,#10b981,#34d399){% elif tt.status == 'generated' %}linear-gradient(90deg,#5b4ff5,#7c72f7){% else %}linear-gradient(90deg,#e5e7eb,#d1d5db){% endif %}"></div>
-    <div style="padding:22px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px">
-        <div>
-          <div style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;color:var(--text)">{{ tt.name }}</div>
-          {% if tt.academic_year %}<div style="font-size:.78rem;color:var(--text-muted);margin-top:2px">{{ tt.academic_year }}</div>{% endif %}
-        </div>
-        <span class="badge badge-{% if tt.status == 'published' %}success{% elif tt.status == 'generated' %}primary{% elif tt.status == 'generating' %}warning{% else %}gray{% endif %}">
-          {% if tt.status == 'published' %}✓ {% elif tt.status == 'generating' %}⏳ {% endif %}{{ tt.get_status_display }}
-        </span>
+  <div class="card card-sm"
+       style="display:flex;align-items:center;gap:16px;transition:box-shadow .2s;"
+       onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'"
+       onmouseout="this.style.boxShadow=''">
+ 
+    <!-- Icon -->
+    <div style="width:44px;height:44px;background:#ede9fe;border-radius:12px;
+                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg style="width:20px;height:20px;color:#4f46e5;"
+           fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                 a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+ 
+    <!-- Info -->
+    <div style="flex:1;min-width:0;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;
+                  color:#0f0e17;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        {{ tt.name }}</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:2px;">
+        {% if tt.academic_year %}{{ tt.academic_year }} · {% endif %}
+        {{ tt.slots.count }} slots ·
+        Updated {{ tt.updated_at|timesince }} ago
       </div>
-
-      <div style="display:flex;gap:16px;margin-bottom:16px">
-        <div style="text-align:center">
-          <div style="font-size:1.2rem;font-weight:800;color:var(--text)">{{ tt.lessons.count }}</div>
-          <div style="font-size:.72rem;color:var(--text-muted)">Lessons</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.2rem;font-weight:800;color:var(--text)">{{ tt.slots.count }}</div>
-          <div style="font-size:.72rem;color:var(--text-muted)">Slots</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.2rem;font-weight:800;color:var(--text)">{% if tt.ai_generated %}✓{% else %}—{% endif %}</div>
-          <div style="font-size:.72rem;color:var(--text-muted)">AI Gen</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:.85rem;font-weight:600;color:var(--text)">{{ tt.created_at|date:"M d" }}</div>
-          <div style="font-size:.72rem;color:var(--text-muted)">Created</div>
-        </div>
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <a href="{% url 'timetable_setup' tt.pk %}" class="btn btn-secondary btn-sm">⚙ Setup</a>
-        {% if tt.status in 'generated published' %}
-        <a href="{% url 'timetable_view' tt.pk %}" class="btn btn-primary btn-sm">👁 View</a>
-        {% endif %}
-        <a href="{% url 'chatbot' %}?timetable={{ tt.pk }}" class="btn btn-sm" style="background:#ede9fe;color:#5b4ff5;border:1px solid #c4b5fd">🤖 Chat</a>
-        <form method="post" action="{% url 'delete_timetable' tt.pk %}" style="margin-left:auto" onsubmit="return confirm('Delete this timetable?')">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger btn-sm">🗑</button>
-        </form>
-      </div>
+    </div>
+ 
+    <!-- Status -->
+    <span class="badge
+      {% if tt.status == 'published' %}badge-green
+      {% elif tt.status == 'generated' %}badge-blue
+      {% elif tt.status == 'generating' %}badge-amber
+      {% elif tt.status == 'failed' %}badge-red
+      {% else %}badge-gray{% endif %}"
+      style="flex-shrink:0;">
+      {{ tt.get_status_display }}
+    </span>
+ 
+    <!-- Actions -->
+    <div style="display:flex;gap:6px;flex-shrink:0;">
+      <a href="{% url 'timetables:setup' pk=tt.pk %}"
+         class="btn btn-secondary btn-sm">Setup</a>
+      {% if tt.status in 'generated,published' %}
+      <a href="{% url 'timetables:view' pk=tt.pk %}"
+         class="btn btn-primary btn-sm">View Grid</a>
+      {% endif %}
     </div>
   </div>
   {% endfor %}
 </div>
+ 
 {% else %}
 <div class="card">
   <div class="empty-state">
-    <div class="empty-icon">📋</div>
+    <div class="empty-icon">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                 a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
     <div class="empty-title">No timetables yet</div>
-    <div class="empty-desc">Create your first timetable to get started with AI-powered scheduling.</div>
-    <button class="btn btn-primary" onclick="openModal('modal-create')">+ Create Timetable</button>
+    <div class="empty-sub">
+      Create your first AI-generated timetable in minutes.</div>
+    <a href="{% url 'timetables:create' %}" class="btn btn-primary">
+      Create First Timetable</a>
   </div>
 </div>
 {% endif %}
-
-<!-- Create Modal -->
-<div class="modal-overlay" id="modal-create">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Create New Timetable</div>
-      <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
-    </div>
-    <form method="post" action="{% url 'create_timetable' %}">
-      {% csrf_token %}
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Timetable Name *</label>
-          <input type="text" name="name" class="form-control" placeholder="e.g. Class 10 - Term 1 2026" required autofocus>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Academic Year</label>
-          <input type="text" name="academic_year" class="form-control" placeholder="e.g. 2025-2026">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-create')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Create →</button>
-      </div>
-    </form>
-  </div>
-</div>
+ 
 {% endblock %}

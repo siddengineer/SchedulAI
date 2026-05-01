@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Period — {{ bell.name }}{% endblock %}
+{% block page_title %}Add Period to {{ bell.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{% url 'timetables:bell-detail' bell.pk %}" class="btn btn-secondary">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:520px;margin:0 auto">
+  <div class="card-header">
+    <div class="card-title">New Period</div>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <div class="modal-body">
+      {{ form.as_p }}
+    </div>
+    <div class="modal-footer">
+      <a href="{% url 'timetables:bell-detail' bell.pk %}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Add Period</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

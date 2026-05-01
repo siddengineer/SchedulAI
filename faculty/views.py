@@ -32,7 +32,7 @@ def add_faculty(request):
             messages.success(request, f'Faculty "{name}" added successfully.')
         else:
             messages.error(request, 'Name is required.')
-    return redirect('faculty_list')
+    return redirect('faculty:list')
 
 @login_required
 def edit_faculty(request, pk):
@@ -51,7 +51,7 @@ def edit_faculty(request, pk):
         subject_ids = request.POST.getlist('subjects')
         f.subjects.set(subject_ids)
         messages.success(request, f'Faculty "{f.name}" updated.')
-    return redirect('faculty_list')
+    return redirect('faculty:list')
 
 @login_required
 def delete_faculty(request, pk):
@@ -59,7 +59,7 @@ def delete_faculty(request, pk):
     name = f.name
     f.delete()
     messages.success(request, f'Faculty "{name}" deleted.')
-    return redirect('faculty_list')
+    return redirect('faculty:list')
 
 @login_required
 def add_leave(request, pk):
@@ -74,4 +74,4 @@ def add_leave(request, pk):
             status='approved',
         )
         messages.success(request, 'Leave recorded.')
-    return redirect('faculty_list')
+    return redirect('faculty:list')

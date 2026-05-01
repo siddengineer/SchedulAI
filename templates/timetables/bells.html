@@ -19,7 +19,7 @@
       <div class="card-title">🔔 {{ bell.name }}</div>
       <div class="card-subtitle">{{ bell.working_days|join:', ' }}</div>
     </div>
-    <form method="post" action="{% url 'delete_bell' bell.pk %}" onsubmit="return confirm('Delete this bell schedule?')">
+    <form method="post" action="{% url 'timetables:bell-delete' bell.pk %}" onsubmit="return confirm('Delete this bell schedule?')">
       {% csrf_token %}
       <button type="submit" class="btn btn-danger btn-sm">🗑</button>
     </form>
@@ -65,7 +65,7 @@
       <div class="modal-title">Create Bell Schedule</div>
       <button class="modal-close" onclick="closeModal('modal-bell')">✕</button>
     </div>
-    <form method="post" action="{% url 'create_bell' %}">
+    <form method="post" action="{% url 'timetables:bell-create' %}">
       {% csrf_token %}
       <div class="modal-body">
         <div class="form-group">
@@ -75,7 +75,7 @@
         <div class="form-group">
           <label class="form-label">Working Days *</label>
           <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
-            {% for day in "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"|split:"," %}
+            {% for day in days %}
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.87rem;padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;transition:all .2s">
               <input type="checkbox" name="working_days" value="{{ day }}"
                 {% if day != 'Sunday' and day != 'Saturday' %}checked{% endif %}

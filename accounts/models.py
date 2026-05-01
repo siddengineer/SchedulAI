@@ -38,3 +38,13 @@ class User(AbstractUser):
 
     def is_pro(self):
         return self.plan in ['pro', 'max']
+
+    @property
+    def name(self):
+        return self.organization_name or self.get_full_name() or self.email
+
+    def can_create_timetable(self):
+        from timetables.models import Timetable
+        if self.plan in ['pro', 'max']:
+            return True
+        return Timetable.objects.filter(org=self).count() < 3

@@ -75,7 +75,7 @@
             <div class="td-actions">
               <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ f.pk }}, '{{ f.name|escapejs }}', '{{ f.email|escapejs }}', '{{ f.phone|escapejs }}', '{{ f.employee_id|escapejs }}', '{{ f.department|escapejs }}', '{{ f.designation|escapejs }}', {{ f.max_periods_per_day }}, {{ f.max_periods_per_week }}, '{{ f.status }}')">✏ Edit</button>
               <button class="btn btn-secondary btn-sm" onclick="openLeaveModal({{ f.pk }}, '{{ f.name|escapejs }}')">📅 Leave</button>
-              <form method="post" action="{% url 'delete_faculty' f.pk %}" onsubmit="return confirm('Delete {{ f.name }}?')">
+              <form method="post" action="{% url 'faculty:delete' f.pk %}" onsubmit="return confirm('Delete {{ f.name }}?')">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger btn-sm">🗑</button>
               </form>
@@ -103,7 +103,7 @@
       <div class="modal-title">Add Faculty Member</div>
       <button class="modal-close" onclick="closeModal('modal-add-faculty')">✕</button>
     </div>
-    <form method="post" action="{% url 'add_faculty' %}">
+    <form method="post" action="{% url 'faculty:add' %}">
       {% csrf_token %}
       <div class="modal-body">
         <div class="grid-2">
@@ -156,7 +156,7 @@
               <span class="color-dot" style="background:{{ sub.color }}"></span>{{ sub.name }}
             </label>
             {% empty %}
-            <p style="font-size:.82rem;color:var(--text-muted)">No subjects found. <a href="{% url 'resources' %}?tab=subjects" style="color:#5b4ff5">Add subjects first →</a></p>
+            <p style="font-size:.82rem;color:var(--text-muted)">No subjects found. <a href="{% url 'resources:resources' %}?tab=subjects" style="color:#5b4ff5">Add subjects first →</a></p>
             {% endfor %}
           </div>
         </div>

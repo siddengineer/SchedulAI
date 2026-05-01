@@ -1,142 +1,350 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard — SchedualAI{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% load static %}
+{% block title %}Dashboard — SchedulAI{% endblock %}
+
+{% block breadcrumb %}
+  <span class="page-title">Dashboard</span>
+{% endblock %}
 
 {% block topbar_actions %}
-<a href="{% url 'create_timetable' %}" class="btn btn-primary">+ New Timetable</a>
+  {% if can_create_timetable %}
+  <a href="{% url 'timetables:create' %}" class="btn btn-primary btn-sm">
+    <svg fill="none" stroke="currentColor" stroke-width="2.5"
+         viewBox="0 0 24 24" style="width:14px;height:14px;">
+      <path d="M12 4v16m8-8H4"/>
+    </svg>
+    New Timetable
+  </a>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
 
-{% if not user.is_pro %}
-<div class="upgrade-banner">
+<!-- Upgrade banner (Free plan only) -->
+{% if org and org.plan and org.plan.name == 'Free' %}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;
+            background:linear-gradient(135deg,#ede9fe,#e0e7ff);
+            border:1px solid #c4b5fd;border-radius:14px;
+            padding:16px 20px;margin-bottom:24px;">
   <div>
-    <strong>🚀 Unlock Premium Features</strong>
-    <p>Upgrade to Pro for unlimited timetables, advanced analytics, priority support, and more.</p>
+    <p style="font-size:13.5px;font-weight:700;color:#3730a3;margin:0 0 3px;">
+      Unlock Premium Features with Pro</p>
+    <p style="font-size:12px;color:#4338ca;margin:0;">
+      Get AI chatbot, unlimited timetables, analytics, PDF/Excel export and more.</p>
   </div>
-  <a href="#" class="btn">Explore Plans</a>
+  <a href="{% url 'billing:upgrade' %}" class="btn btn-primary btn-sm"
+     style="flex-shrink:0;">Explore Plans →</a>
 </div>
 {% endif %}
 
-<!-- Stats -->
-<div class="stat-grid">
+<!-- ── Stats Row ── -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
+
   <div class="stat-card">
-    <div class="stat-icon purple">📋</div>
-    <div>
-      <div class="stat-value">{{ timetables.count }}</div>
-      <div class="stat-label">Total Timetables</div>
+    <div class="stat-icon stat-icon-indigo">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                 a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
     </div>
+    <div class="stat-label">Total Timetables</div>
+    <div class="stat-value">{{ timetable_count }}</div>
+    <a href="{% url 'timetables:list' %}" class="stat-link">View all →</a>
   </div>
+
   <div class="stat-card">
-    <div class="stat-icon orange">👨‍🏫</div>
-    <div>
-      <div class="stat-value">{{ faculty_count }}</div>
-      <div class="stat-label">Faculty Members</div>
+    <div class="stat-icon stat-icon-amber">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0
+                 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/>
+      </svg>
     </div>
+    <div class="stat-label">Faculty Members</div>
+    <div class="stat-value">{{ faculty_count }}</div>
+    <a href="{% url 'faculty:list' %}" class="stat-link">Manage →</a>
   </div>
+
   <div class="stat-card">
-    <div class="stat-icon green">📚</div>
-    <div>
-      <div class="stat-value">{{ subject_count }}</div>
-      <div class="stat-label">Subjects</div>
+    <div class="stat-icon stat-icon-green">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168
+                 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477
+                 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0
+                 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5
+                 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
     </div>
+    <div class="stat-label">Subjects</div>
+    <div class="stat-value">{{ subject_count }}</div>
+    <a href="{% url 'resources:resources' %}" class="stat-link">View →</a>
   </div>
+
   <div class="stat-card">
-    <div class="stat-icon blue">🏫</div>
-    <div>
-      <div class="stat-value">{{ grade_count }}</div>
-      <div class="stat-label">Grade/Classes</div>
+    <div class="stat-icon {% if pending_leaves > 0 %}stat-icon-red{% else %}stat-icon-indigo{% endif %}">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14
+                 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1
+                 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+      </svg>
     </div>
-  </div>
-</div>
-
-<!-- Quick Actions + Schedule -->
-<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px">
-
-  <!-- Quick Actions -->
-  <div class="card">
-    <div class="card-header">
-      <div>
-        <div class="card-title">Quick Actions</div>
-        <div class="card-subtitle">Jump to common tasks</div>
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <a href="{% url 'timetable_list' %}" style="display:flex;align-items:center;gap:14px;padding:14px;background:#f8f7ff;border-radius:10px;text-decoration:none;border:1px solid #ede9fe;transition:all .2s" onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f8f7ff'">
-        <span style="font-size:1.4rem">📋</span>
-        <div><strong style="color:#1a1830;font-size:.9rem">My Timetables</strong><br><span style="color:#6b7280;font-size:.8rem">Manage all your schedules</span></div>
-        <span style="margin-left:auto;color:#5b4ff5">→</span>
-      </a>
-      <a href="{% url 'reports' %}" style="display:flex;align-items:center;gap:14px;padding:14px;background:#fff7ed;border-radius:10px;text-decoration:none;border:1px solid #fed7aa;transition:all .2s" onmouseover="this.style.background='#ffe4c4'" onmouseout="this.style.background='#fff7ed'">
-        <span style="font-size:1.4rem">📊</span>
-        <div><strong style="color:#1a1830;font-size:.9rem">Reports & Analytics</strong><br><span style="color:#6b7280;font-size:.8rem">Faculty workload & insights</span></div>
-        <span style="margin-left:auto;color:#f97316">→</span>
-      </a>
-      <a href="{% url 'faculty_list' %}" style="display:flex;align-items:center;gap:14px;padding:14px;background:#ecfdf5;border-radius:10px;text-decoration:none;border:1px solid #a7f3d0;transition:all .2s" onmouseover="this.style.background='#d1fae5'" onmouseout="this.style.background='#ecfdf5'">
-        <span style="font-size:1.4rem">👨‍🏫</span>
-        <div><strong style="color:#1a1830;font-size:.9rem">Manage Faculty</strong><br><span style="color:#6b7280;font-size:.8rem">Add teachers & assign subjects</span></div>
-        <span style="margin-left:auto;color:#10b981">→</span>
-      </a>
-      <a href="{% url 'chatbot' %}" style="display:flex;align-items:center;gap:14px;padding:14px;background:linear-gradient(135deg,#ede9fe,#e0e7ff);border-radius:10px;text-decoration:none;border:1px solid #c4b5fd;transition:all .2s">
-        <span style="font-size:1.4rem">🤖</span>
-        <div><strong style="color:#1a1830;font-size:.9rem">AI Chatbot</strong><br><span style="color:#6b7280;font-size:.8rem">Ask about your timetable</span></div>
-        <span style="margin-left:auto;background:#5b4ff5;color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:20px">AI</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- My Schedule / Recent -->
-  <div class="card">
-    <div class="card-header">
-      <div>
-        <div class="card-title">My Schedule</div>
-        <div class="card-subtitle">Published timetables</div>
-      </div>
-      <a href="{% url 'timetable_list' %}" class="btn btn-secondary btn-sm">View All</a>
-    </div>
-
-    {% if published %}
-    <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-size:.78rem;color:#065f46;font-weight:700;margin-bottom:4px">ACTIVE TIMETABLE</div>
-      <div style="font-weight:700;color:#1a1830">{{ published.name }}</div>
-      <div style="font-size:.8rem;color:#6b7280;margin-top:4px">{{ published.updated_at|date:"M d, Y" }}</div>
-      <a href="{% url 'timetable_view' published.pk %}" class="btn btn-success btn-sm" style="margin-top:10px">View Timetable</a>
-    </div>
-    {% else %}
-    <div class="empty-state" style="padding:30px 20px">
-      <div class="empty-icon">📅</div>
-      <div class="empty-title">No published timetable</div>
-      <div class="empty-desc">Generate and publish a timetable to see your schedule here.</div>
-      <a href="{% url 'create_timetable' %}" class="btn btn-primary btn-sm">+ Create Timetable</a>
-    </div>
-    {% endif %}
-
-    {% if timetables %}
-    <div class="divider"></div>
-    <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Recent</div>
-    {% for tt in timetables|slice:":4" %}
-    <a href="{% url 'timetable_setup' tt.pk %}" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none;border-bottom:1px solid #f3f4f6">
-      <span style="font-size:1rem">📋</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.87rem;font-weight:600;color:#1a1830;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ tt.name }}</div>
-        <div style="font-size:.75rem;color:#6b7280">{{ tt.get_status_display }} · {{ tt.created_at|date:"M d" }}</div>
-      </div>
-      <span class="badge badge-{% if tt.status == 'published' %}success{% elif tt.status == 'generated' %}primary{% else %}gray{% endif %}">{{ tt.get_status_display }}</span>
-    </a>
-    {% endfor %}
-    {% endif %}
+    <div class="stat-label">Grade/Classes</div>
+    <div class="stat-value">{{ grade_count }}</div>
+    <a href="{% url 'resources:resources' %}" class="stat-link">View →</a>
   </div>
 
 </div>
 
-<!-- AI Chatbot Card -->
-<div class="card" style="margin-top:20px;background:linear-gradient(135deg,#0f0e1a,#1a1830);border:none;display:flex;align-items:center;gap:24px;padding:24px 28px">
-  <div style="width:56px;height:56px;background:linear-gradient(135deg,#5b4ff5,#f97316);border-radius:16px;display:grid;place-items:center;font-size:1.6rem;flex-shrink:0">🤖</div>
-  <div style="flex:1">
-    <div style="font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:#fff">TimetableAI Assistant</div>
-    <div style="font-size:.85rem;color:rgba(168,158,201,.8);margin-top:4px">Ask anything about your schedules — conflicts, workload, gaps — powered by Groq LLaMA.</div>
+<!-- ── Main Grid ── -->
+<div style="display:grid;grid-template-columns:3fr 2fr;gap:20px;">
+
+  <!-- Left: Quick Actions + Recent -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Quick Actions</span>
+        <span style="font-size:12px;color:#9ca3af;">Jump to common tasks</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+
+        <a href="{% url 'timetables:list' %}"
+           style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+                  background:#f7f6f3;border:1px solid #e5e3dd;border-radius:12px;
+                  text-decoration:none;transition:all .15s;"
+           onmouseover="this.style.borderColor='#4f46e5';this.style.background='#fafafe'"
+           onmouseout="this.style.borderColor='#e5e3dd';this.style.background='#f7f6f3'">
+          <div style="width:38px;height:38px;background:#ede9fe;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg style="width:18px;height:18px;color:#4f46e5;"
+                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                       a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:13.5px;color:#0f0e17;">My Timetables</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:1px;">
+              Manage all your schedules</div>
+          </div>
+          <svg style="width:16px;height:16px;color:#9ca3af;"
+               fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+
+        <a href="{% url 'reports:reports' %}"
+           style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+                  background:#fffbeb;border:1px solid #fde68a;border-radius:12px;
+                  text-decoration:none;transition:all .15s;"
+           onmouseover="this.style.background='#fef3c7'"
+           onmouseout="this.style.background='#fffbeb'">
+          <div style="width:38px;height:38px;background:#fef3c7;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg style="width:18px;height:18px;color:#d97706;"
+                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0
+                       002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0
+                       012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2
+                       2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2
+                       0 01-2-2z"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:13.5px;color:#0f0e17;">
+              Reports & Analytics</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:1px;">
+              Faculty workload & insights</div>
+          </div>
+          <svg style="width:16px;height:16px;color:#9ca3af;"
+               fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+
+        <a href="{% url 'faculty:list' %}"
+           style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+                  background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;
+                  text-decoration:none;transition:all .15s;"
+           onmouseover="this.style.background='#dcfce7'"
+           onmouseout="this.style.background='#f0fdf4'">
+          <div style="width:38px;height:38px;background:#d1fae5;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg style="width:18px;height:18px;color:#059669;"
+                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0
+                       0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:13.5px;color:#0f0e17;">Manage Faculty</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:1px;">
+              Add teachers & assign subjects</div>
+          </div>
+          <svg style="width:16px;height:16px;color:#9ca3af;"
+               fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+
+        {% if has_chatbot %}
+        <a href="{% url 'chatbot:chatbot' %}"
+           style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+                  background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;
+                  text-decoration:none;transition:all .15s;"
+           onmouseover="this.style.background='#ede9fe'"
+           onmouseout="this.style.background='#f5f3ff'">
+          <div style="width:38px;height:38px;background:#ede9fe;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg style="width:18px;height:18px;color:#7c3aed;"
+                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0
+                       01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0
+                       01-2 2h-5l-5 5v-5z"/>
+            </svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:13.5px;color:#0f0e17;">AI Chatbot</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:1px;">
+              Ask about your timetable</div>
+          </div>
+          <span style="background:#4f46e5;color:#fff;font-size:10px;font-weight:700;
+                       padding:2px 8px;border-radius:100px;">AI</span>
+        </a>
+        {% endif %}
+
+      </div>
+    </div>
+
   </div>
-  <a href="{% url 'chatbot' %}" class="btn btn-primary">Open Chat →</a>
+
+  <!-- Right: My Schedule + Recent -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- My Schedule -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">My Schedule</div>
+          <div style="font-size:12px;color:#9ca3af;margin-top:2px;">
+            Published timetables</div>
+        </div>
+        <a href="{% url 'timetables:list' %}"
+           style="font-size:12px;font-weight:600;color:#4f46e5;text-decoration:none;">
+          View All</a>
+      </div>
+
+      {% if recent_timetables %}
+        {% for tt in recent_timetables %}
+        {% if tt.status == 'published' %}
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;
+                    border-bottom:1px solid #f0eeea;">
+          <div style="width:30px;height:30px;background:#ede9fe;border-radius:8px;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg style="width:14px;height:14px;color:#4f46e5;"
+                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                       a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:13px;color:#0f0e17;
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ tt.name }}</div>
+            <div style="font-size:11px;color:#9ca3af;">
+              {{ tt.updated_at|date:"d M Y" }}</div>
+          </div>
+          <a href="{% url 'timetables:view' pk=tt.pk %}"
+             class="btn btn-primary btn-sm" style="font-size:11px;padding:4px 10px;">
+            Open</a>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- RECENT section -->
+        <div style="margin-top:14px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                      letter-spacing:.06em;color:#9ca3af;margin-bottom:8px;">RECENT</div>
+          {% for tt in recent_timetables %}
+          <div style="display:flex;align-items:center;justify-content:space-between;
+                      padding:7px 0;border-bottom:1px solid #f7f6f3;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg style="width:13px;height:13px;color:#9ca3af;"
+                   fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7
+                         a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:#374151;">
+                  {{ tt.name }}</div>
+                <div style="font-size:10.5px;color:#9ca3af;">
+                  {{ tt.get_status_display }} · {{ tt.updated_at|date:"d M" }}</div>
+              </div>
+            </div>
+            <span class="badge
+              {% if tt.status == 'published' %}badge-green
+              {% elif tt.status == 'generated' %}badge-blue
+              {% elif tt.status == 'generating' %}badge-amber
+              {% elif tt.status == 'failed' %}badge-red
+              {% else %}badge-gray{% endif %}"
+              style="font-size:10px;">
+              {{ tt.get_status_display }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+
+      {% else %}
+        <!-- No timetable yet -->
+        <div style="text-align:center;padding:32px 16px;">
+          <div style="font-size:32px;margin-bottom:10px;">📅</div>
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+                      color:#374151;margin-bottom:4px;">No published timetable</div>
+          <div style="font-size:12px;color:#9ca3af;margin-bottom:16px;">
+            Generate and publish a timetable to see your schedule here.</div>
+          <a href="{% url 'timetables:create' %}" class="btn btn-primary btn-sm">
+            + Create Timetable</a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
 </div>
+
+<!-- AI Assistant bottom bar -->
+{% if has_chatbot %}
+<div style="margin-top:20px;background:#0f0e17;border-radius:14px;
+            padding:18px 24px;display:flex;align-items:center;
+            justify-content:space-between;gap:16px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:40px;height:40px;background:#4f46e5;border-radius:12px;
+                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg style="width:20px;height:20px;color:#fff;"
+           fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0
+                 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0
+                 01-2 2h-5l-5 5v-5z"/>
+      </svg>
+    </div>
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;">
+        TimetableAI Assistant</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:1px;">
+        Ask anything about your schedules — conflicts, workload, gaps</div>
+    </div>
+  </div>
+  <a href="{% url 'chatbot:index' %}"
+     style="background:#4f46e5;color:#fff;padding:9px 18px;border-radius:10px;
+            font-family:'Syne',sans-serif;font-size:13px;font-weight:700;
+            text-decoration:none;white-space:nowrap;flex-shrink:0;
+            transition:background .15s;"
+     onmouseover="this.style.background='#4338ca'"
+     onmouseout="this.style.background='#4f46e5'">
+    Open Chat →
+  </a>
+</div>
+{% endif %}
 
 {% endblock %}
