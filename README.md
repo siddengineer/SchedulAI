@@ -1,5 +1,4 @@
 
-# 🚀 SchedulAI – AI Timetable Generator
 
 # 📅 SchedulAI — AI-Powered School Timetable Generator
 
